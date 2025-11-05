@@ -1,0 +1,50 @@
+services:
+  db:
+    image: postgres:15
+    container_name: adhesion_db
+    environment:
+      POSTGRES_USER: adhesion_user
+      POSTGRES_PASSWORD: adhesion_pass
+      POSTGRES_DB: adhesion_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - adhesion_net
+
+  sonarqube:
+    image: sonarqube:latest
+    container_name: sonarqube
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    ports:
+      - "9000:9000"
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_extensions:/opt/sonarqube/extensions
+    networks:
+      - adhesion_net
+
+  adhesion-app:
+    build: .
+    container_name: adhesion_app
+    depends_on:
+      - db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/adhesion_db
+      SPRING_DATASOURCE_USERNAME: adhesion_user
+      SPRING_DATASOURCE_PASSWORD: adhesion_pass
+    ports:
+      - "8085:8085"
+    networks:
+      - adhesion_net
+
+volumes:
+  sonarqube_data:
+  sonarqube_logs:
+  sonarqube_extensions:
+
+networks:
+  adhesion_net:
