@@ -25,12 +25,12 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public User getById(@PathVariable UUID id) {
+    public User getById(@PathVariable Long id) {
         return userService.findById(id);
     }
 
     @PostMapping("/{id}/deactivate")
-    public void deactivate(@PathVariable UUID id) {
+    public void deactivate(@PathVariable Long id) {
         userService.deactivate(id);
     }
 }

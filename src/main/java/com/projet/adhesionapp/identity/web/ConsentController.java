@@ -21,18 +21,18 @@ public class ConsentController {
     private final ConsentService consentService;
 
     @GetMapping("/user/{userId}")
-    public List<Consent> getConsents(@PathVariable UUID userId) {
+    public List<Consent> getConsents(@PathVariable Long userId) {
         return consentService.getConsentsForUser(userId);
     }
 
     @PostMapping("/user/{userId}/grant")
-    public Consent grant(@PathVariable UUID userId,
+    public Consent grant(@PathVariable Long userId,
                          @RequestBody GrantConsentRequest request) {
         return consentService.grantConsent(userId, request.getScope());
     }
 
     @PostMapping("/user/{userId}/revoke")
-    public Consent revoke(@PathVariable UUID userId,
+    public Consent revoke(@PathVariable Long userId,
                           @RequestBody GrantConsentRequest request) {
         return consentService.revokeConsent(userId, request.getScope());
     }

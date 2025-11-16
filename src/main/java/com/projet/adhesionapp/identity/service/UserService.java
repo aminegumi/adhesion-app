@@ -62,12 +62,12 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public User findById(UUID id) {
+    public User findById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Utilisateur introuvable."));
     }
 
-    public void deactivate(UUID id) {
+    public void deactivate(Long id) {
         User user = findById(id);
         user.setActive(false);
     }

@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface ConsentRepository extends JpaRepository<Consent, UUID> {
+public interface ConsentRepository extends JpaRepository<Consent, Long> {
 
     List<Consent> findByUser(User user);
 
