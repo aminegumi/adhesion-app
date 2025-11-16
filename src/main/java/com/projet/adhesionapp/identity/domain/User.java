@@ -6,7 +6,6 @@ import lombok.*;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.UUID;
 
 /**
  * Utilisateur (patient) de l'application.

@@ -2,7 +2,6 @@ package com.projet.adhesionapp.assessment.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.util.*;
 
  @Entity
     @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
