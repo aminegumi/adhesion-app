@@ -3,11 +3,13 @@ services:
     image: postgres:15
     container_name: adhesion_db
     environment:
-      POSTGRES_USER: adhesion_user
-      POSTGRES_PASSWORD: adhesion_pass
-      POSTGRES_DB: adhesion_db
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-adhesion_db}
     ports:
-      - "5432:5432"
+      # bind container Postgres to a different host port so local Postgres (if any)
+      # doesn't conflict. Host 5433 -> container 5432.
+      - "5433:5432"
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
     networks:
@@ -34,12 +36,14 @@ services:
       - .env
     depends_on:
       - db
+    # Ensure the app connects to the Postgres service inside the Compose network.
+    # Keep credentials in .env (gitignored). We set the datasource URL here so that
+    # when running in Docker the app connects to the 'db' service instead of localhost.
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/adhesion_db
-      SPRING_DATASOURCE_USERNAME: adhesion_user
-      SPRING_DATASOURCE_PASSWORD: adhesion_pass
+    # Map host port 8085 to the application's internal Tomcat port 8082
     ports:
-      - "8085:8085"
+      - "8085:8082"
     networks:
       - adhesion_net
 
