@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.UUID;
+
 
 @Service
 @RequiredArgsConstructor
@@ -68,7 +68,8 @@ public class UserService {
     }
 
     public void deactivate(Long id) {
-        User user = findById(id);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Utilisateur introuvable."));
         user.setActive(false);
     }
 }

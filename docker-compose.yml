@@ -30,6 +30,8 @@ services:
   adhesion-app:
     build: .
     container_name: adhesion_app
+    env_file:
+      - .env
     depends_on:
       - db
     environment:
