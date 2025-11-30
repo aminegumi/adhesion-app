@@ -1,14 +1,15 @@
 package com.projet.adhesionapp.assessment.web;
 
-
 import com.projet.adhesionapp.assessment.domain.Answer;
 import com.projet.adhesionapp.assessment.domain.QuestionItem;
 import com.projet.adhesionapp.assessment.domain.TestSession;
 import com.projet.adhesionapp.assessment.model.AnswerUpsertRequest;
 import com.projet.adhesionapp.assessment.model.StartSessionRequest;
+import com.projet.adhesionapp.assessment.model.TestSessionDto;
 import com.projet.adhesionapp.assessment.service.TestSessionService;
 import com.projet.adhesionapp.identity.domain.User;
 import com.projet.adhesionapp.identity.service.UserService;
+import jakarta.validation.Valid;
 import lombok.*;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,14 +24,14 @@ public class SessionController {
     private final UserService userService;
 
     @PostMapping("/start")
-    public TestSession start(@RequestBody StartSessionRequest req) {
+    public TestSessionDto start(@Valid @RequestBody StartSessionRequest req) {
         User user = userService.findById(req.userId());
         return service.startSession(req.testId(), user);
     }
 
     @PostMapping("/{id}/submit")
     public void submit(@PathVariable Long id,
-                       @RequestBody List<AnswerUpsertRequest> answers) {
+            @RequestBody List<AnswerUpsertRequest> answers) {
 
         List<Answer> entities = answers.stream()
                 .map(a -> Answer.builder()

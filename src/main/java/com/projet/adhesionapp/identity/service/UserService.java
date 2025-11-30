@@ -72,4 +72,10 @@ public class UserService {
                 .orElseThrow(() -> new NotFoundException("Utilisateur introuvable."));
         user.setActive(false);
     }
+
+    public void activate(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Utilisateur introuvable."));
+        user.setActive(true);
+    }
 }

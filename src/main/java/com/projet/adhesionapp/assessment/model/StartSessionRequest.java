@@ -1,3 +1,8 @@
 package com.projet.adhesionapp.assessment.model;
 
-public record StartSessionRequest(Long testId, Long userId) {}
+import jakarta.validation.constraints.NotNull;
+
+public record StartSessionRequest(
+        @NotNull Long testId,
+        @NotNull Long userId) {
+}

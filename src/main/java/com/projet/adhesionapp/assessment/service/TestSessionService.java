@@ -8,8 +8,11 @@ import com.projet.adhesionapp.assessment.repo.TestDefinitionRepository;
 import com.projet.adhesionapp.assessment.repo.TestSessionRepository;
 import com.projet.adhesionapp.common.exception.NotFoundException;
 import com.projet.adhesionapp.identity.domain.User;
+import com.projet.adhesionapp.assessment.model.TestSessionDto;
+import com.projet.adhesionapp.assessment.model.QuestionItemDto;
 import lombok.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -22,8 +25,9 @@ public class TestSessionService {
     private final TestDefinitionRepository testRepo;
     private final AnswerRepository answerRepo;
 
-    public TestSession startSession(Long testId, User user) {
-        TestDefinition test = testRepo.findById(testId)
+    @Transactional
+    public TestSessionDto startSession(Long testId, User user) {
+        TestDefinition test = testRepo.findWithQuestionsById(testId)
                 .orElseThrow(() -> new NotFoundException("Test introuvable"));
 
         TestSession session = TestSession.builder()
@@ -32,7 +36,8 @@ public class TestSessionService {
                 .startedAt(Instant.now())
                 .build();
 
-        return sessionRepo.save(session);
+        TestSession saved = sessionRepo.save(session);
+        return toDto(saved); // questions are loaded within the transaction
     }
 
     public void submitAnswers(Long sessionId, List<Answer> answers) {
@@ -46,5 +51,19 @@ public class TestSessionService {
         session.setSubmittedAt(Instant.now());
         sessionRepo.save(session);
     }
-}
 
+    private TestSessionDto toDto(TestSession s) {
+        List<QuestionItemDto> q = s.getTestDefinition().getQuestions()
+                .stream()
+                .map(it -> new QuestionItemDto(it.getId(), it.getCode(), it.getText()))
+                .toList();
+        TestDefinition td = s.getTestDefinition();
+        return new TestSessionDto(
+                s.getId(),
+                td.getId(),
+                td.getCode(),
+                td.getTitle(),
+                s.getStartedAt(),
+                q);
+    }
+}

@@ -1,0 +1,225 @@
+@baseUrl = http://localhost:8082
+@contentType = application/json
+
+### -------------------------
+### AUTH CONTROLLER
+### -------------------------
+
+### Register
+POST {{baseUrl}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email": "john.doe99@example.com",
+  "password": "P@ssw0rd!",
+  "displayName": "John Doe",
+  "birthDate": "1995-05-15",
+  "gender": "female"
+}
+
+### Login
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "john.doe99@example.com",
+  "password": "P@ssw0rd!"
+}
+
+### -------------------------
+### USER CONTROLLER
+### -------------------------
+
+### Get all users
+GET {{baseUrl}}/api/users
+
+### Get user by ID
+GET {{baseUrl}}/api/users/2
+
+### Deactivate user
+POST {{baseUrl}}/api/users/2/deactivate
+
+### Activate user (fake endpoint)
+POST {{baseUrl}}/api/users/2/activate
+
+### -------------------------
+### TEST CONTROLLER
+### -------------------------
+
+### Create test
+POST {{baseUrl}}/api/tests
+Content-Type: {{contentType}}
+
+{
+  "code": "ADX002",
+  "title": "Échelle de Motivation Thérapeutique",
+  "version": "2.3",
+  "active": false
+}
+
+### Get all tests
+GET {{baseUrl}}/api/tests
+
+### Get test by ID
+GET {{baseUrl}}/api/tests/2
+
+### Get test by code
+GET {{baseUrl}}/api/tests/code/ADX002
+
+### Update test
+PUT {{baseUrl}}/api/tests/2
+Content-Type: {{contentType}}
+
+{
+  "title": "Échelle de Motivation Thérapeutique V2",
+  "version": "2.4",
+  "active": true
+}
+
+### Delete test
+DELETE {{baseUrl}}/api/tests/2
+
+### -------------------------
+### QUESTION CONTROLLER
+### -------------------------
+
+### Create question
+POST {{baseUrl}}/api/questions
+Content-Type: {{contentType}}
+
+{
+  "testId": 2,
+  "code": "Q12",
+  "text": "Je me sens motivé(e) à suivre mon traitement correctement.",
+  "orderIndex": 3,
+  "reverseScored": true,
+  "minScore": 0,
+  "maxScore": 10
+}
+
+### Get question by ID
+GET {{baseUrl}}/api/questions/2
+
+### Get questions by test
+GET {{baseUrl}}/api/questions/test/2
+
+### Update question
+PUT {{baseUrl}}/api/questions/2
+Content-Type: {{contentType}}
+
+{
+  "text": "Je suis confiant(e) dans ma capacité à suivre le traitement.",
+  "orderIndex": 3,
+  "reverseScored": false,
+  "minScore": 0,
+  "maxScore": 10
+}
+
+### Delete question
+DELETE {{baseUrl}}/api/questions/2
+
+### -------------------------
+### SESSION CONTROLLER
+### -------------------------
+
+### Start session
+POST {{baseUrl}}/api/sessions/start
+Content-Type: {{contentType}}
+
+{
+  "testId": 2,
+  "userId": 2
+}
+
+### Submit answers
+POST {{baseUrl}}/api/sessions/2/submit
+Content-Type: {{contentType}}
+
+[
+  { "itemId": 2, "value": 7 },
+  { "itemId": 3, "value": 9 },
+  { "itemId": 4, "value": 2 }
+]
+
+### -------------------------
+### SCORE CONTROLLER
+### -------------------------
+
+### Compute profile score
+POST {{baseUrl}}/api/scores/2/compute/motivation
+
+### -------------------------
+### ADHERENCE CONTROLLER
+### -------------------------
+
+### Save adherence summary
+POST {{baseUrl}}/api/adherence/user/2
+Content-Type: {{contentType}}
+
+{
+  "date": "2025-02-10",
+  "completionRate": 0.62,
+  "adherenceScore": 0.54
+}
+
+### Get adherence history
+GET {{baseUrl}}/api/adherence/user/2?from=2025-01-01&to=2025-12-31
+
+### -------------------------
+### PREDICTION CONTROLLER
+### -------------------------
+
+### Predict
+POST {{baseUrl}}/api/predictions
+Content-Type: {{contentType}}
+
+{
+  "userId": 2,
+  "date": "2025-03-05",
+  "profileScore": 0.45,
+  "recentAdherenceRate": 0.32
+}
+
+### Prediction history for user
+GET {{baseUrl}}/api/predictions/user/2
+
+### -------------------------
+### ACTION PLAN CONTROLLER
+### -------------------------
+
+### Create plan
+POST {{baseUrl}}/api/plans
+Content-Type: {{contentType}}
+
+{
+  "userId": 2,
+  "date": "2025-03-05",
+  "primaryActionId": 300,
+  "altActionId": 450
+}
+
+### Get plans for user
+GET {{baseUrl}}/api/plans/user/2
+
+### -------------------------
+### CONSENT CONTROLLER
+### -------------------------
+
+### Grant consent
+POST {{baseUrl}}/api/consents/user/2/grant
+Content-Type: {{contentType}}
+
+{
+  "scope": "treatment:share"
+}
+
+### Revoke consent
+POST {{baseUrl}}/api/consents/user/2/revoke
+Content-Type: {{contentType}}
+
+{
+  "scope": "treatment:share"
+}
+
+### Get consents for user
+GET {{baseUrl}}/api/consents/user/2

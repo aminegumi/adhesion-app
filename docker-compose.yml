@@ -22,7 +22,7 @@ services:
 
   sonarqube:
     image: sonarqube:latest
-    container_name: sonarqube
+    container_name: sonarqube--*
     environment:
       SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
     ports:

@@ -32,4 +32,11 @@ public class UserController {
     public void deactivate(@PathVariable Long id) {
         userService.deactivate(id);
     }
+
+
+    @PostMapping("/{id}/activate")
+    public void activate(@PathVariable Long id) {
+        userService.activate(id);
+    }
+
 }
