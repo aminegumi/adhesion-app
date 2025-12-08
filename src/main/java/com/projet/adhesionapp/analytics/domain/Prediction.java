@@ -1,10 +1,10 @@
 package com.projet.adhesionapp.analytics.domain;
 
-
 import com.projet.adhesionapp.identity.domain.User;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 @Entity
@@ -37,5 +37,22 @@ public class Prediction {
      */
     @Column(length = 2000)
     private String topFeaturesJson;
-}
 
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        Instant now = Instant.now();
+        this.createdAt = now;
+        this.updatedAt = now;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = Instant.now();
+    }
+}

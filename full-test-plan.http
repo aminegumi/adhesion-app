@@ -1,0 +1,241 @@
+### ===========================================
+### FULL TEST PLAN - RUN IN ORDER
+### ===========================================
+### Instructions:
+### 1. Run each request one by one using "Send Request"
+### 2. Copy all responses to share with me
+### ===========================================
+
+@baseUrl = http://localhost:8082
+@contentType = application/json
+
+### ===========================================
+### TEST 1: HEALTH CHECK
+### ===========================================
+GET {{baseUrl}}/swagger-ui/index.html
+
+### ===========================================
+### TEST 2: REGISTER USER
+### ===========================================
+# @name registerUser
+POST {{baseUrl}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email": "test.patient@example.com",
+  "password": "TestPass123!",
+  "displayName": "Test Patient",
+  "birthDate": "1990-05-15",
+  "gender": "Male"
+}
+
+### ===========================================
+### TEST 3: LOGIN
+### ===========================================
+# @name loginUser
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "test.patient@example.com",
+  "password": "TestPass123!"
+}
+
+### ===========================================
+### TEST 4: GET ALL AVAILABLE TESTS
+### ===========================================
+GET {{baseUrl}}/api/tests
+
+### ===========================================
+### TEST 5: GET MMAS-8 TEST DETAILS
+### NOTE: To get questions, you need a different endpoint
+### ===========================================
+# @name mmasTest
+GET {{baseUrl}}/api/tests/code/MMAS-8
+
+### ===========================================
+### TEST 6: START TEST SESSION
+### Use testId from test 5 response (MMAS-8 id is 4)
+### Use userId from login response (5)
+### ===========================================
+# @name startSession
+POST {{baseUrl}}/api/sessions/start
+Content-Type: {{contentType}}
+
+{
+  "testId": 4,
+  "userId": 5
+}
+
+### ===========================================
+### TEST 7: SUBMIT TEST ANSWERS
+### Replace SESSION_ID (1) with id from startSession response
+### The answer format is an array of {questionId, value}
+### ===========================================
+# @name submitAnswers
+POST {{baseUrl}}/api/sessions/1/submit
+Content-Type: {{contentType}}
+
+[
+  {"questionId": 1, "value": 0},
+  {"questionId": 2, "value": 1},
+  {"questionId": 3, "value": 0},
+  {"questionId": 4, "value": 0},
+  {"questionId": 5, "value": 1},
+  {"questionId": 6, "value": 0},
+  {"questionId": 7, "value": 2},
+  {"questionId": 8, "value": 0}
+]
+
+### ===========================================
+### TEST 8: CHECK USER PSYCHOLOGICAL PROFILE
+### Replace USER_ID with actual user id
+### ===========================================
+GET {{baseUrl}}/api/profiles/user/1/latest
+
+### ===========================================
+### TEST 9: CREATE SIMPLE TREATMENT PLAN
+### ===========================================
+# @name createPlanSimple
+POST {{baseUrl}}/api/treatment-plans
+Content-Type: {{contentType}}
+
+{
+  "userId": 1,
+  "title": "My Wellness Plan",
+  "description": "A simple treatment plan for wellness",
+  "durationWeeks": 4
+}
+
+### ===========================================
+### TEST 10: CREATE TREATMENT PLAN WITH MEDICATIONS
+### ===========================================
+# @name createPlanWithMeds
+POST {{baseUrl}}/api/treatment-plans
+Content-Type: {{contentType}}
+
+{
+  "userId": 1,
+  "title": "Diabetes Management Plan",
+  "description": "Complete treatment plan with multiple medications",
+  "durationWeeks": 8,
+  "medicationsList": [
+    {
+      "name": "Metformin",
+      "dosage": "500mg",
+      "instructions": "Take with breakfast",
+      "timesPerDay": 2,
+      "isChronic": true,
+      "scheduledTimes": ["08:00", "20:00"],
+      "notificationsEnabled": true,
+      "reminderMinutesBefore": 15
+    },
+    {
+      "name": "Lisinopril",
+      "dosage": "10mg",
+      "instructions": "Take in the morning",
+      "timesPerDay": 1,
+      "isChronic": true,
+      "scheduledTimes": ["09:00"],
+      "notificationsEnabled": true,
+      "reminderMinutesBefore": 10
+    },
+    {
+      "name": "Vitamin D",
+      "dosage": "1000 IU",
+      "instructions": "Take with food",
+      "timesPerDay": 1,
+      "isChronic": false,
+      "scheduledTimes": ["12:00"],
+      "notificationsEnabled": false
+    }
+  ]
+}
+
+### ===========================================
+### TEST 11: GET ALL USER TREATMENT PLANS
+### ===========================================
+GET {{baseUrl}}/api/treatment-plans/user/1
+
+### ===========================================
+### TEST 12: GET MEDICATIONS FOR PLAN 2
+### Replace PLAN_ID with id from createPlanWithMeds (usually 2)
+### ===========================================
+GET {{baseUrl}}/api/treatment-plans/2/medications
+
+### ===========================================
+### TEST 13: GET ALL USER MEDICATIONS
+### ===========================================
+GET {{baseUrl}}/api/treatment-plans/medications/user/1
+
+### ===========================================
+### TEST 14: GET CHRONIC MEDICATIONS ONLY
+### ===========================================
+GET {{baseUrl}}/api/treatment-plans/medications/user/1/chronic
+
+### ===========================================
+### TEST 15: GET ACTIVE MEDICATIONS
+### ===========================================
+GET {{baseUrl}}/api/treatment-plans/medications/user/1/active
+
+### ===========================================
+### TEST 16: ADD NEW MEDICATION TO PLAN 1
+### ===========================================
+# @name addMedication
+POST {{baseUrl}}/api/treatment-plans/1/medications
+Content-Type: {{contentType}}
+
+{
+  "name": "Aspirin",
+  "dosage": "81mg",
+  "instructions": "Take with water in the morning",
+  "timesPerDay": 1,
+  "isChronic": false,
+  "scheduledTimes": ["07:00"],
+  "notificationsEnabled": true,
+  "reminderMinutesBefore": 5
+}
+
+### ===========================================
+### TEST 17: UPDATE MEDICATION
+### Replace MEDICATION_ID with id from addMedication response (usually 4)
+### ===========================================
+PUT {{baseUrl}}/api/treatment-plans/medications/4
+Content-Type: {{contentType}}
+
+{
+  "dosage": "100mg",
+  "timesPerDay": 2,
+  "scheduledTimes": ["07:00", "19:00"]
+}
+
+### ===========================================
+### TEST 18: GET TODAY'S TASKS
+### ===========================================
+GET {{baseUrl}}/api/treatment-plans/tasks/user/1/today
+
+### ===========================================
+### TEST 19: GET PENDING TASKS
+### ===========================================
+GET {{baseUrl}}/api/treatment-plans/tasks/user/1/pending
+
+### ===========================================
+### TEST 20: DELETE MEDICATION
+### Replace MEDICATION_ID with the Aspirin medication id (usually 4)
+### ===========================================
+DELETE {{baseUrl}}/api/treatment-plans/medications/4
+
+### ===========================================
+### TEST 21: VERIFY MEDICATION DELETED
+### ===========================================
+GET {{baseUrl}}/api/treatment-plans/1/medications
+
+### ===========================================
+### TEST COMPLETE - VERIFY DATABASE
+### ===========================================
+### Run this in terminal to see all tables:
+### docker exec adhesion_db psql -U postgres -d adhesion_db -c "\dt"
+###
+### Run this to see medications table:
+### docker exec adhesion_db psql -U postgres -d adhesion_db -c "SELECT * FROM medications"
+### ===========================================

@@ -36,3 +36,17 @@ build/
 # Docker
 data/
 *.db
+
+### Angular ###
+**/node_modules/
+**/dist/
+**/.angular/
+
+### Flutter ###
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/*.iml
+**/pubspec.lock

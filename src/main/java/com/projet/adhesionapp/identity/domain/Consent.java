@@ -1,6 +1,5 @@
 package com.projet.adhesionapp.identity.domain;
 
-
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -40,11 +39,24 @@ public class Consent {
     @Column
     private Instant revokedAt;
 
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
     @PrePersist
     public void prePersist() {
+        Instant now = Instant.now();
         if (grantedAt == null) {
-            grantedAt = Instant.now();
+            grantedAt = now;
         }
+        this.createdAt = now;
+        this.updatedAt = now;
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        this.updatedAt = Instant.now();
     }
 }
-

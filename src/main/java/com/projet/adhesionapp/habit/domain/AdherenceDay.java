@@ -4,6 +4,7 @@ import com.projet.adhesionapp.identity.domain.User;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 @Entity
@@ -33,4 +34,18 @@ public class AdherenceDay {
      * Score d’adhésion du jour (par ex. 0.0 -> 1.0).
      */
     private double adherenceScore;
+
+    private Instant createdAt;
+    private Instant updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = Instant.now();
+        updatedAt = Instant.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = Instant.now();
+    }
 }

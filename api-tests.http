@@ -1,0 +1,570 @@
+### ===========================================
+### ADHESION APP - COMPREHENSIVE API TESTS
+### ===========================================
+### Run these tests IN ORDER to verify all endpoints.
+### ===========================================
+
+@baseUrl = http://localhost:8082
+@contentType = application/json
+
+### =====================
+### STEP 1: HEALTH CHECK
+### =====================
+### Expected: 200 OK or redirect
+
+GET {{baseUrl}}/swagger-ui.html
+
+### =====================
+### STEP 2: REGISTER USER
+### =====================
+### Expected: 200 OK with user object
+# @name registerUser
+POST {{baseUrl}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email": "test.patient@example.com",
+  "password": "TestPass123!",
+  "displayName": "Test Patient",
+  "birthDate": "1990-05-15",
+  "gender": "Male"
+}
+
+### =====================
+### STEP 3: LOGIN
+### =====================
+### Expected: 200 OK with user object and token
+# @name loginUser
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "test.patient@example.com",
+  "password": "TestPass123!"
+}
+
+### Store userId for subsequent tests
+@userId = {{loginUser.response.body.user.id}}
+
+### =====================
+### STEP 4: GET AVAILABLE TESTS
+### =====================
+### Expected: 200 OK with list of tests (MMAS-8, PHQ-9, GAD-7, BMQ)
+
+GET {{baseUrl}}/api/tests
+
+### =====================
+### STEP 5: GET MMAS-8 TEST DETAILS
+### =====================
+### Expected: 200 OK with test questions
+# @name mmasTest
+GET {{baseUrl}}/api/tests/MMAS-8
+
+### =====================
+### STEP 6: START TEST SESSION
+### =====================
+### Expected: 200 OK with session ID
+# @name startSession
+POST {{baseUrl}}/api/tests/sessions/start?userId={{userId}}&testCode=MMAS-8
+Content-Type: {{contentType}}
+
+### Store sessionId
+@sessionId = {{startSession.response.body.id}}
+
+### =====================
+### STEP 7: SUBMIT TEST ANSWERS
+### =====================
+### Expected: 200 OK with completed session and score
+# @name submitAnswers
+POST {{baseUrl}}/api/tests/sessions/{{sessionId}}/submit
+Content-Type: {{contentType}}
+
+{
+  "answers": [
+    {"questionId": 1, "value": 0},
+    {"questionId": 2, "value": 1},
+    {"questionId": 3, "value": 0},
+    {"questionId": 4, "value": 0},
+    {"questionId": 5, "value": 1},
+    {"questionId": 6, "value": 0},
+    {"questionId": 7, "value": 2},
+    {"questionId": 8, "value": 0}
+  ]
+}
+
+### =====================
+### STEP 8: CHECK USER PROFILE
+### =====================
+### Expected: 200 OK with psychological profile
+
+GET {{baseUrl}}/api/profiles/user/{{userId}}/latest
+
+### =====================
+### STEP 9: CREATE TREATMENT PLAN (NO MEDICATIONS)
+### =====================
+### Expected: 200 OK with treatment plan
+# @name createPlanSimple
+POST {{baseUrl}}/api/treatment-plans
+Content-Type: {{contentType}}
+
+{
+  "userId": {{userId}},
+  "title": "My Wellness Plan",
+  "description": "A simple treatment plan",
+  "durationWeeks": 4
+}
+
+### Store planId
+@planId = {{createPlanSimple.response.body.id}}
+
+### =====================
+### STEP 10: CREATE TREATMENT PLAN WITH MEDICATIONS
+### =====================
+### Expected: 200 OK with treatment plan including medications
+# @name createPlanWithMeds
+POST {{baseUrl}}/api/treatment-plans
+Content-Type: {{contentType}}
+
+{
+  "userId": {{userId}},
+  "title": "Diabetes Management Plan",
+  "description": "Treatment plan with multiple medications",
+  "durationWeeks": 8,
+  "medicationsList": [
+    {
+      "name": "Metformin",
+      "dosage": "500mg",
+      "instructions": "Take with breakfast",
+      "timesPerDay": 2,
+      "isChronic": true,
+      "scheduledTimes": ["08:00", "20:00"],
+      "notificationsEnabled": true,
+      "reminderMinutesBefore": 15
+    },
+    {
+      "name": "Lisinopril",
+      "dosage": "10mg",
+      "instructions": "Take in the morning",
+      "timesPerDay": 1,
+      "isChronic": true,
+      "scheduledTimes": ["09:00"],
+      "notificationsEnabled": true,
+      "reminderMinutesBefore": 10
+    },
+    {
+      "name": "Vitamin D",
+      "dosage": "1000 IU",
+      "instructions": "Take with food",
+      "timesPerDay": 1,
+      "isChronic": false,
+      "scheduledTimes": ["12:00"],
+      "notificationsEnabled": false
+    }
+  ]
+}
+
+### Store plan2Id
+@plan2Id = {{createPlanWithMeds.response.body.id}}
+
+### =====================
+### STEP 11: GET USER TREATMENT PLANS
+### =====================
+### Expected: 200 OK with list of plans
+
+GET {{baseUrl}}/api/treatment-plans/user/{{userId}}
+
+### =====================
+### STEP 12: GET PLAN MEDICATIONS
+### =====================
+### Expected: 200 OK with list of medications for the plan
+
+GET {{baseUrl}}/api/treatment-plans/{{plan2Id}}/medications
+
+### =====================
+### STEP 13: GET ALL USER MEDICATIONS
+### =====================
+### Expected: 200 OK with all medications
+
+GET {{baseUrl}}/api/treatment-plans/medications/user/{{userId}}
+
+### =====================
+### STEP 14: GET CHRONIC MEDICATIONS
+### =====================
+### Expected: 200 OK with chronic medications only
+
+GET {{baseUrl}}/api/treatment-plans/medications/user/{{userId}}/chronic
+
+### =====================
+### STEP 15: GET ACTIVE MEDICATIONS
+### =====================
+### Expected: 200 OK with active medications
+
+GET {{baseUrl}}/api/treatment-plans/medications/user/{{userId}}/active
+
+### =====================
+### STEP 16: ADD MEDICATION TO EXISTING PLAN
+### =====================
+### Expected: 200 OK with new medication
+# @name addMedication
+POST {{baseUrl}}/api/treatment-plans/{{planId}}/medications
+Content-Type: {{contentType}}
+
+{
+  "name": "Aspirin",
+  "dosage": "81mg",
+  "instructions": "Take with water",
+  "timesPerDay": 1,
+  "isChronic": false,
+  "scheduledTimes": ["07:00"],
+  "notificationsEnabled": true,
+  "reminderMinutesBefore": 5
+}
+
+### Store medicationId
+@medicationId = {{addMedication.response.body.id}}
+
+### =====================
+### STEP 17: UPDATE MEDICATION
+### =====================
+### Expected: 200 OK with updated medication
+
+PUT {{baseUrl}}/api/treatment-plans/medications/{{medicationId}}
+Content-Type: {{contentType}}
+
+{
+  "dosage": "100mg",
+  "timesPerDay": 2,
+  "scheduledTimes": ["07:00", "19:00"]
+}
+
+### =====================
+### STEP 18: GET TODAY'S TASKS
+### =====================
+### Expected: 200 OK with list of tasks
+
+GET {{baseUrl}}/api/treatment-plans/tasks/user/{{userId}}/today
+
+### =====================
+### STEP 19: GET PENDING TASKS
+### =====================
+### Expected: 200 OK with pending tasks
+
+GET {{baseUrl}}/api/treatment-plans/tasks/user/{{userId}}/pending
+
+### =====================
+### STEP 20: DELETE MEDICATION
+### =====================
+### Expected: 204 No Content
+
+DELETE {{baseUrl}}/api/treatment-plans/medications/{{medicationId}}
+
+### =====================
+### STEP 21: VERIFY MEDICATION DELETED
+### =====================
+### Expected: 200 OK, medication should not be in list
+
+GET {{baseUrl}}/api/treatment-plans/{{planId}}/medications
+
+### =====================
+### END OF TESTS
+### =====================
+
+### =====================
+### 3. USER MANAGEMENT
+### =====================
+
+### 3.1 Get all users
+GET {{baseUrl}}/api/users
+
+### 3.2 Get user by ID
+GET {{baseUrl}}/api/users/{{userId}}
+
+### =====================
+### 4. PSYCHOLOGICAL TESTS
+### =====================
+
+### 4.1 Get all available tests
+# @name getAllTests
+GET {{baseUrl}}/api/tests
+
+### 4.2 Get specific test by ID (should have questions after init)
+# @name getTestById
+GET {{baseUrl}}/api/tests/1
+
+### 4.3 Get test by code
+GET {{baseUrl}}/api/tests/code/MMAS-8
+
+### 4.4 Get test by code - PHQ-9
+GET {{baseUrl}}/api/tests/code/PHQ-9
+
+### 4.5 Get test by code - GAD-7
+GET {{baseUrl}}/api/tests/code/GAD-7
+
+### 4.6 Get test by code - BMQ
+GET {{baseUrl}}/api/tests/code/BMQ
+
+### =====================
+### 5. QUESTIONS
+### =====================
+
+### 5.1 Get questions for test ID 1 (MMAS-8)
+GET {{baseUrl}}/api/questions/test/1
+
+### 5.2 Get questions for test ID 2 (PHQ-9)
+GET {{baseUrl}}/api/questions/test/2
+
+### =====================
+### 6. TEST SESSIONS (Taking a test)
+### =====================
+
+### 6.1 Start a new test session (MMAS-8)
+# @name startSession
+POST {{baseUrl}}/api/sessions/start
+Content-Type: {{contentType}}
+
+{
+  "testId": 1,
+  "userId": {{userId}}
+}
+
+### Store session ID
+@sessionId = {{startSession.response.body.id}}
+
+### 6.2 Submit answers for MMAS-8 (8 questions)
+# @name submitAnswers
+POST {{baseUrl}}/api/sessions/{{sessionId}}/submit
+Content-Type: {{contentType}}
+
+[
+  { "questionId": 1, "score": 0 },
+  { "questionId": 2, "score": 1 },
+  { "questionId": 3, "score": 0 },
+  { "questionId": 4, "score": 0 },
+  { "questionId": 5, "score": 1 },
+  { "questionId": 6, "score": 0 },
+  { "questionId": 7, "score": 1 },
+  { "questionId": 8, "score": 1 }
+]
+
+### 6.3 Get test result
+GET {{baseUrl}}/api/sessions/{{sessionId}}/result
+
+### 6.4 Get patient test history
+GET {{baseUrl}}/api/sessions/patient/{{userId}}/history
+
+### =====================
+### 7. PSYCHOLOGICAL PROFILE
+### =====================
+
+### 7.1 Get latest profile for user (may return 404 if no profile)
+GET {{baseUrl}}/api/profiles/user/{{userId}}/latest
+
+### 7.2 Get all profiles for user
+GET {{baseUrl}}/api/profiles/user/{{userId}}
+
+### 7.3 Create a psychological profile
+# @name createProfile
+POST {{baseUrl}}/api/profiles
+Content-Type: {{contentType}}
+
+{
+  "userId": {{userId}},
+  "anxietyScore": 5.5,
+  "depressionScore": 3.2,
+  "medicationBeliefsScore": 7.8,
+  "adherenceMotivationScore": 8.0,
+  "sessionIds": []
+}
+
+### =====================
+### 8. ADHERENCE TRACKING
+### =====================
+
+### 8.1 Save adherence summary
+POST {{baseUrl}}/api/adherence/user/{{userId}}
+Content-Type: {{contentType}}
+
+{
+  "date": "2025-12-08",
+  "completionRate": 0.85,
+  "adherenceScore": 0.78
+}
+
+### 8.2 Get adherence history
+GET {{baseUrl}}/api/adherence/user/{{userId}}?from=2025-01-01&to=2025-12-31
+
+### =====================
+### 9. PREDICTIONS
+### =====================
+
+### 9.1 Create prediction
+POST {{baseUrl}}/api/predictions
+Content-Type: {{contentType}}
+
+{
+  "userId": {{userId}},
+  "date": "2025-12-08",
+  "profileScore": 0.65,
+  "recentAdherenceRate": 0.78
+}
+
+### 9.2 Get prediction history for user
+GET {{baseUrl}}/api/predictions/user/{{userId}}
+
+### =====================
+### 10. RECOMMENDATIONS
+### =====================
+
+### 10.1 Get recommendations for user
+GET {{baseUrl}}/api/recommendations/user/{{userId}}
+
+### 10.2 Get active recommendations
+GET {{baseUrl}}/api/recommendations/user/{{userId}}/active
+
+### 10.3 Generate recommendations (may use AI)
+POST {{baseUrl}}/api/recommendations/generate/{{userId}}
+
+### =====================
+### 11. TREATMENT PLANS
+### =====================
+
+### 11.1 Get user treatment plans
+GET {{baseUrl}}/api/treatment-plans/user/{{userId}}
+
+### 11.2 Get active treatment plans
+GET {{baseUrl}}/api/treatment-plans/user/{{userId}}/active
+
+### 11.3 Get today's tasks
+GET {{baseUrl}}/api/treatment-plans/tasks/user/{{userId}}/today
+
+### 11.4 Get pending tasks
+GET {{baseUrl}}/api/treatment-plans/tasks/user/{{userId}}/pending
+
+### 11.5 Create treatment plan
+# @name createTreatmentPlan
+POST {{baseUrl}}/api/treatment-plans
+Content-Type: {{contentType}}
+
+{
+  "userId": {{userId}},
+  "title": "Medication Adherence Improvement Plan",
+  "description": "A structured plan to improve medication adherence",
+  "durationWeeks": 4,
+  "goals": ["Take medication on time", "Track daily adherence", "Attend weekly check-ins"],
+  "tasks": [
+    {
+      "title": "Morning medication",
+      "description": "Take morning medication with breakfast",
+      "frequency": "DAILY",
+      "scheduledTime": "08:00"
+    },
+    {
+      "title": "Evening medication",
+      "description": "Take evening medication with dinner",
+      "frequency": "DAILY",
+      "scheduledTime": "19:00"
+    }
+  ]
+}
+
+### =====================
+### 12. AI ENDPOINTS (Requires OpenAI API Key)
+### =====================
+### Note: These will fail with 500 if no OpenAI API key is configured
+
+### 12.1 Get motivational message
+POST {{baseUrl}}/api/ai/motivation
+Content-Type: {{contentType}}
+
+{
+  "userId": {{userId}},
+  "adherenceScore": 0.75
+}
+
+### 12.2 Get AI recommendations
+POST {{baseUrl}}/api/ai/recommendations
+Content-Type: {{contentType}}
+
+{
+  "userId": {{userId}},
+  "nonAdherenceRisk": 0.3
+}
+
+### 12.3 Generate AI treatment plan
+POST {{baseUrl}}/api/ai/treatment-plan
+Content-Type: {{contentType}}
+
+{
+  "userId": {{userId}},
+  "identifiedIssues": ["Forgetfulness", "Side effects concerns"],
+  "currentMedications": ["Metformin 500mg", "Lisinopril 10mg"]
+}
+
+### =====================
+### 13. CONSENTS
+### =====================
+
+### 13.1 Grant consent
+POST {{baseUrl}}/api/consents/user/{{userId}}/grant
+Content-Type: {{contentType}}
+
+{
+  "scope": "treatment:share"
+}
+
+### 13.2 Get user consents
+GET {{baseUrl}}/api/consents/user/{{userId}}
+
+### 13.3 Revoke consent
+POST {{baseUrl}}/api/consents/user/{{userId}}/revoke
+Content-Type: {{contentType}}
+
+{
+  "scope": "treatment:share"
+}
+
+### =====================
+### 14. ACTION PLANS
+### =====================
+
+### 14.1 Create action plan
+POST {{baseUrl}}/api/plans
+Content-Type: {{contentType}}
+
+{
+  "userId": {{userId}},
+  "date": "2025-12-08",
+  "primaryActionId": 100,
+  "altActionId": 200
+}
+
+### 14.2 Get plans for user
+GET {{baseUrl}}/api/plans/user/{{userId}}
+
+### =====================
+### EXPECTED RESULTS SUMMARY
+### =====================
+### 
+### ✅ Should work without issues:
+###    - Health checks (Swagger, API docs)
+###    - Authentication (register, login)
+###    - User management
+###    - Psychological tests CRUD
+###    - Questions CRUD
+###    - Test sessions (start, submit, results)
+###    - Adherence tracking
+###    - Predictions
+###    - Consents
+###    - Action plans
+###
+### ⚠️ May return 404 initially (no data):
+###    - Profiles (until profile is created)
+###    - Treatment plans (until plan is created)
+###    - Recommendations (until generated)
+###
+### ❌ Will fail without OpenAI API key:
+###    - AI motivation endpoint
+###    - AI recommendations endpoint
+###    - AI treatment plan generation
+###
+### ===========================================

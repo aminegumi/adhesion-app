@@ -72,6 +72,7 @@ public class QuestionService {
     }
 
     private QuestionItemDto toDto(QuestionItem q) {
-        return new QuestionItemDto(q.getId(), q.getCode(), q.getText());
+        return new QuestionItemDto(q.getId(), q.getCode(), q.getText(),
+                q.getMinScore(), q.getMaxScore(), q.getOrderIndex(), q.isReverseScored());
     }
 }

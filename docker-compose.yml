@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:15-alpine
     container_name: adhesion_db
     environment:
       POSTGRES_USER: postgres
@@ -15,14 +15,14 @@ services:
     networks:
       - adhesion_net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d kpi"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d adhesion_db"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   sonarqube:
     image: sonarqube:latest
-    container_name: sonarqube--*
+    container_name: sonarqube
     environment:
       SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
     ports:

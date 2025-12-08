@@ -12,4 +12,7 @@ public interface TestDefinitionRepository extends JpaRepository<TestDefinition, 
 
     @EntityGraph(attributePaths = "questions")
     Optional<TestDefinition> findWithQuestionsById(Long id);
+
+    @EntityGraph(attributePaths = "questions")
+    Optional<TestDefinition> findWithQuestionsByCode(String code);
 }
