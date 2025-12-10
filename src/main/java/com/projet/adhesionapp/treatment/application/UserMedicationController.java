@@ -4,6 +4,7 @@ import com.projet.adhesionapp.treatment.model.UserMedicationDto;
 import com.projet.adhesionapp.treatment.model.CreateMedicationRequest;
 import com.projet.adhesionapp.treatment.service.UserMedicationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +21,7 @@ import java.util.Map;
 @RequestMapping("/api/medications")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
+@Slf4j
 public class UserMedicationController {
 
     private final UserMedicationService userMedicationService;
@@ -48,6 +50,15 @@ public class UserMedicationController {
     @PostMapping
     public ResponseEntity<UserMedicationDto> addMedication(@RequestBody CreateMedicationRequest request) {
         UserMedicationDto medication = userMedicationService.addMedication(request);
+
+        // Generate doses for today in a separate transaction
+        try {
+            userMedicationService.generateDailySchedule(request.userId());
+        } catch (Exception e) {
+            // Log but don't fail the response - doses can be generated later
+            log.warn("Failed to generate doses for user {}: {}", request.userId(), e.getMessage());
+        }
+
         return ResponseEntity.ok(medication);
     }
 

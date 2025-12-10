@@ -3,6 +3,7 @@ package com.projet.adhesionapp.common.web;
 import com.projet.adhesionapp.common.exception.ApiException;
 import com.projet.adhesionapp.common.exception.BadRequestException;
 import com.projet.adhesionapp.common.exception.NotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -18,6 +19,7 @@ import java.util.Map;
  * Gestion globale des exceptions, renvoie des réponses JSON propres.
  */
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     /**
@@ -28,8 +30,8 @@ public class GlobalExceptionHandler {
             int status,
             String error,
             String message,
-            Map<String, Object> details
-    ) { }
+            Map<String, Object> details) {
+    }
 
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, Map<String, Object> details) {
         ErrorResponse body = new ErrorResponse(
@@ -37,8 +39,7 @@ public class GlobalExceptionHandler {
                 status.value(),
                 status.getReasonPhrase(),
                 message,
-                details
-        );
+                details);
         return ResponseEntity.status(status).body(body);
     }
 
@@ -68,7 +69,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleOther(Exception ex) {
-        // En pratique : logger l'exception
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur interne du serveur", Map.of());
+        // Log the exception with full stack trace
+        log.error("Unhandled exception occurred: {}", ex.getMessage(), ex);
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur interne du serveur: " + ex.getMessage(), Map.of());
     }
 }
