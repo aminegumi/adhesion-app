@@ -583,5 +583,71 @@ class ApiClient {
     );
   }
 
+  // ==================== STATIC HTTP METHODS ====================
+
+  static const String _defaultBaseUrl = 'http://localhost:8082';
+
+  /// Static GET request
+  static Future<http.Response> get(String endpoint) async {
+    final uri = Uri.parse('$_defaultBaseUrl$endpoint');
+    final res = await http.get(uri);
+    if (res.statusCode >= 400) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    return res;
+  }
+
+  /// Static POST request
+  static Future<http.Response> post(String endpoint, dynamic body) async {
+    final uri = Uri.parse('$_defaultBaseUrl$endpoint');
+    final res = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+    if (res.statusCode >= 400) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    return res;
+  }
+
+  /// Static PUT request
+  static Future<http.Response> put(String endpoint, dynamic body) async {
+    final uri = Uri.parse('$_defaultBaseUrl$endpoint');
+    final res = await http.put(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+    if (res.statusCode >= 400) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    return res;
+  }
+
+  /// Static PATCH request
+  static Future<http.Response> patch(String endpoint, dynamic body) async {
+    final uri = Uri.parse('$_defaultBaseUrl$endpoint');
+    final res = await http.patch(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+    if (res.statusCode >= 400) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    return res;
+  }
+
+  /// Static DELETE request
+  static Future<http.Response> delete(String endpoint) async {
+    final uri = Uri.parse('$_defaultBaseUrl$endpoint');
+    final res = await http.delete(uri);
+    if (res.statusCode >= 400) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    return res;
+  }
+
   void close() => _client.close();
 }

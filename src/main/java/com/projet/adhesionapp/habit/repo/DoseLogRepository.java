@@ -107,4 +107,40 @@ public interface DoseLogRepository extends JpaRepository<DoseLog, Long> {
      * Count taken doses by user
      */
     long countByUserIdAndStatus(Long userId, DoseStatus status);
+
+    /**
+     * Find a specific dose log by UserMedication
+     */
+    Optional<DoseLog> findByUserMedicationIdAndScheduledDateAndScheduledTime(
+            Long userMedicationId, LocalDate date, LocalTime time);
+
+    /**
+     * Find all doses for a specific UserMedication
+     */
+    List<DoseLog> findByUserMedicationIdOrderByScheduledDateDescScheduledTimeDesc(Long userMedicationId);
+
+    /**
+     * Find pending doses for a UserMedication
+     */
+    @Query("SELECT d FROM DoseLog d WHERE d.userMedication.id = :medicationId AND d.status = 'PENDING'")
+    List<DoseLog> findPendingDosesByMedicationId(@Param("medicationId") Long medicationId);
+
+    /**
+     * Delete all doses for a medication (used when deleting medication)
+     */
+    void deleteByMedicationId(Long medicationId);
+
+    /**
+     * Delete all doses for a UserMedication
+     */
+    void deleteByUserMedicationId(Long userMedicationId);
+
+    /**
+     * Find doses needing reminders (for UserMedication)
+     */
+    @Query("SELECT d FROM DoseLog d WHERE d.status = 'PENDING' " +
+            "AND d.reminderSent = false " +
+            "AND d.scheduledDate = :today " +
+            "AND d.userMedication.remindersEnabled = true")
+    List<DoseLog> findUserMedicationDosesNeedingReminders(@Param("today") LocalDate today);
 }

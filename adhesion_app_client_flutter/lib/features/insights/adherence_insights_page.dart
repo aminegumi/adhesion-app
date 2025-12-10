@@ -32,6 +32,7 @@ class _AdherenceInsightsPageState extends State<AdherenceInsightsPage> {
   }
 
   Future<void> _loadPrediction() async {
+    if (!mounted) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -39,17 +40,27 @@ class _AdherenceInsightsPageState extends State<AdherenceInsightsPage> {
 
     try {
       final userId = await ApiClient.getStoredUserId();
+      if (!mounted) return;
       if (userId == null) {
-        setState(() => _error = 'Please log in first');
+        setState(() {
+          _error = 'Please log in first';
+          _loading = false;
+        });
         return;
       }
 
       final prediction = await _api.getEnhancedPrediction(userId);
-      setState(() => _prediction = prediction);
+      if (!mounted) return;
+      setState(() {
+        _prediction = prediction;
+        _loading = false;
+      });
     } catch (e) {
-      setState(() => _error = e.toString());
-    } finally {
-      setState(() => _loading = false);
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
     }
   }
 

@@ -13,6 +13,7 @@ import '../insights/adherence_insights_page.dart';
 import '../auth/login_page.dart';
 import '../doses/todays_doses_page.dart';
 import '../doses/adherence_stats_page.dart';
+import '../medications/pages/my_medications_page.dart';
 
 class DashboardPage extends StatefulWidget {
   final String baseUrl;
@@ -402,6 +403,23 @@ class _DashboardPageState extends State<DashboardPage> {
                               MaterialPageRoute(
                                 builder: (_) =>
                                     TreatmentPlanPage(baseUrl: widget.baseUrl),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _QuickAction(
+                          label: 'My Medications',
+                          color1: const Color(0xFFDB2777),
+                          color2: const Color(0xFFF472B6),
+                          icon: Icons.medication_liquid,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const MyMedicationsPage(),
                               ),
                             );
                           },

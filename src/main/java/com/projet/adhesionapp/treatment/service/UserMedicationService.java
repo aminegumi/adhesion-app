@@ -1,0 +1,401 @@
+package com.projet.adhesionapp.treatment.service;
+
+import com.projet.adhesionapp.common.exception.NotFoundException;
+import com.projet.adhesionapp.habit.domain.DoseLog;
+import com.projet.adhesionapp.habit.domain.DoseLog.DoseStatus;
+import com.projet.adhesionapp.habit.repo.DoseLogRepository;
+import com.projet.adhesionapp.identity.domain.User;
+import com.projet.adhesionapp.identity.repo.UserRepository;
+import com.projet.adhesionapp.treatment.domain.UserMedication;
+import com.projet.adhesionapp.treatment.model.CreateMedicationRequest;
+import com.projet.adhesionapp.treatment.model.UserMedicationDto;
+import com.projet.adhesionapp.treatment.repo.UserMedicationRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Service for managing user medications and generating daily dose schedules.
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class UserMedicationService {
+
+    private final UserMedicationRepository medicationRepository;
+    private final DoseLogRepository doseLogRepository;
+    private final UserRepository userRepository;
+
+    /**
+     * Get all medications for a user
+     */
+    public List<UserMedicationDto> getUserMedications(Long userId) {
+        return medicationRepository.findByUserId(userId).stream()
+                .map(UserMedicationDto::fromEntity)
+                .toList();
+    }
+
+    /**
+     * Get only active medications for a user
+     */
+    public List<UserMedicationDto> getActiveMedications(Long userId) {
+        return medicationRepository.findCurrentlyActiveMedications(userId, LocalDate.now()).stream()
+                .map(UserMedicationDto::fromEntity)
+                .toList();
+    }
+
+    /**
+     * Get a medication by ID
+     */
+    public UserMedicationDto getMedication(Long medicationId) {
+        return medicationRepository.findById(medicationId)
+                .map(UserMedicationDto::fromEntity)
+                .orElseThrow(() -> new NotFoundException("Medication not found: " + medicationId));
+    }
+
+    /**
+     * Create a new medication and generate doses for today
+     */
+    @Transactional
+    public UserMedicationDto createMedication(Long userId, CreateMedicationRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User not found: " + userId));
+
+        UserMedication medication = UserMedication.builder()
+                .user(user)
+                .name(request.name())
+                .dosage(request.dosage())
+                .form(request.form())
+                .frequencyPerDay(request.frequencyPerDay())
+                .prescribedBy(request.prescribedBy())
+                .instructions(request.instructions())
+                .startDate(request.startDate() != null ? request.startDate() : LocalDate.now())
+                .endDate(request.endDate())
+                .isChronic(request.isChronic())
+                .currentStock(request.currentStock())
+                .lowStockThreshold(request.lowStockThreshold())
+                .remindersEnabled(request.remindersEnabled())
+                .reminderMinutesBefore(request.reminderMinutesBefore())
+                .notes(request.notes())
+                .reason(request.reason())
+                .color(request.color())
+                .build();
+
+        // Set scheduled times if provided
+        if (request.scheduledTimes() != null && !request.scheduledTimes().isEmpty()) {
+            List<LocalTime> times = request.scheduledTimes().stream()
+                    .map(LocalTime::parse)
+                    .toList();
+            medication.setScheduledTimesList(times);
+        }
+
+        medication = medicationRepository.save(medication);
+        log.info("Created medication {} for user {}", medication.getName(), userId);
+
+        // Generate doses for today if medication starts today or earlier
+        if (medication.isCurrentlyActive()) {
+            generateDosesForMedication(medication, LocalDate.now());
+        }
+
+        return UserMedicationDto.fromEntity(medication);
+    }
+
+    /**
+     * Update a medication
+     */
+    @Transactional
+    public UserMedicationDto updateMedication(Long medicationId, CreateMedicationRequest request) {
+        UserMedication medication = medicationRepository.findById(medicationId)
+                .orElseThrow(() -> new NotFoundException("Medication not found: " + medicationId));
+
+        // Update fields
+        if (request.name() != null)
+            medication.setName(request.name());
+        if (request.dosage() != null)
+            medication.setDosage(request.dosage());
+        if (request.form() != null)
+            medication.setForm(request.form());
+        if (request.frequencyPerDay() != null)
+            medication.setFrequencyPerDay(request.frequencyPerDay());
+        if (request.prescribedBy() != null)
+            medication.setPrescribedBy(request.prescribedBy());
+        if (request.instructions() != null)
+            medication.setInstructions(request.instructions());
+        if (request.startDate() != null)
+            medication.setStartDate(request.startDate());
+        medication.setEndDate(request.endDate()); // Allow null
+        if (request.isChronic() != null)
+            medication.setIsChronic(request.isChronic());
+        medication.setCurrentStock(request.currentStock()); // Allow null
+        medication.setLowStockThreshold(request.lowStockThreshold()); // Allow null
+        if (request.remindersEnabled() != null)
+            medication.setRemindersEnabled(request.remindersEnabled());
+        if (request.reminderMinutesBefore() != null)
+            medication.setReminderMinutesBefore(request.reminderMinutesBefore());
+        medication.setNotes(request.notes());
+        medication.setReason(request.reason());
+        medication.setColor(request.color());
+
+        // Update scheduled times
+        if (request.scheduledTimes() != null && !request.scheduledTimes().isEmpty()) {
+            List<LocalTime> times = request.scheduledTimes().stream()
+                    .map(LocalTime::parse)
+                    .toList();
+            medication.setScheduledTimesList(times);
+        }
+
+        medication = medicationRepository.save(medication);
+        log.info("Updated medication {}", medicationId);
+
+        return UserMedicationDto.fromEntity(medication);
+    }
+
+    /**
+     * Deactivate a medication (soft delete)
+     */
+    @Transactional
+    public void deactivateMedication(Long medicationId) {
+        UserMedication medication = medicationRepository.findById(medicationId)
+                .orElseThrow(() -> new NotFoundException("Medication not found: " + medicationId));
+
+        medication.setActive(false);
+        medicationRepository.save(medication);
+
+        // Cancel pending doses for today and future
+        cancelPendingDoses(medicationId);
+
+        log.info("Deactivated medication {}", medicationId);
+    }
+
+    /**
+     * Delete a medication permanently
+     */
+    @Transactional
+    public void deleteMedication(Long medicationId) {
+        if (!medicationRepository.existsById(medicationId)) {
+            throw new NotFoundException("Medication not found: " + medicationId);
+        }
+
+        // Delete all associated dose logs first
+        doseLogRepository.deleteByMedicationId(medicationId);
+
+        medicationRepository.deleteById(medicationId);
+        log.info("Deleted medication {}", medicationId);
+    }
+
+    /**
+     * Generate doses for a specific medication on a specific date
+     */
+    @Transactional
+    public void generateDosesForMedication(UserMedication medication, LocalDate date) {
+        if (!medication.isCurrentlyActive()) {
+            return;
+        }
+
+        List<LocalTime> times = medication.getEffectiveScheduledTimes();
+        User user = medication.getUser();
+
+        for (LocalTime time : times) {
+            // Check if dose already exists
+            Optional<DoseLog> existing = doseLogRepository
+                    .findByUserMedicationIdAndScheduledDateAndScheduledTime(medication.getId(), date, time);
+
+            if (existing.isEmpty()) {
+                DoseLog dose = DoseLog.builder()
+                        .user(user)
+                        .userMedication(medication)
+                        .scheduledDate(date)
+                        .scheduledTime(time)
+                        .status(DoseStatus.PENDING)
+                        .build();
+                doseLogRepository.save(dose);
+                log.debug("Generated dose for {} at {} on {}", medication.getName(), time, date);
+            }
+        }
+    }
+
+    /**
+     * Generate doses for all active medications of a user for today
+     */
+    @Transactional
+    public void generateTodaysDosesForUser(Long userId) {
+        LocalDate today = LocalDate.now();
+        List<UserMedication> activeMeds = medicationRepository.findCurrentlyActiveMedications(userId, today);
+
+        for (UserMedication med : activeMeds) {
+            generateDosesForMedication(med, today);
+        }
+
+        log.info("Generated today's doses for user {} ({} medications)", userId, activeMeds.size());
+    }
+
+    /**
+     * Scheduled task to generate daily doses for all users at midnight
+     */
+    @Scheduled(cron = "0 0 0 * * *") // Every day at midnight
+    @Transactional
+    public void generateDailyDosesForAllUsers() {
+        log.info("Starting daily dose generation...");
+
+        LocalDate today = LocalDate.now();
+        List<User> allUsers = userRepository.findAll();
+
+        int totalDoses = 0;
+        for (User user : allUsers) {
+            List<UserMedication> activeMeds = medicationRepository.findCurrentlyActiveMedications(user.getId(), today);
+            for (UserMedication med : activeMeds) {
+                generateDosesForMedication(med, today);
+                totalDoses += med.getEffectiveScheduledTimes().size();
+            }
+        }
+
+        log.info("Daily dose generation complete. Generated {} doses for {} users", totalDoses, allUsers.size());
+    }
+
+    /**
+     * Cancel pending doses for a medication
+     */
+    private void cancelPendingDoses(Long medicationId) {
+        List<DoseLog> pendingDoses = doseLogRepository.findPendingDosesByMedicationId(medicationId);
+        for (DoseLog dose : pendingDoses) {
+            dose.setStatus(DoseStatus.SKIPPED);
+            dose.setNotes("Medication deactivated");
+            doseLogRepository.save(dose);
+        }
+    }
+
+    /**
+     * Get medication name suggestions
+     */
+    public List<String> getMedicationSuggestions(String query) {
+        return medicationRepository.findMedicationNames(query);
+    }
+
+    /**
+     * Get medications with low stock
+     */
+    public List<UserMedicationDto> getLowStockMedications(Long userId) {
+        return medicationRepository.findLowStockMedications(userId).stream()
+                .map(UserMedicationDto::fromEntity)
+                .toList();
+    }
+
+    /**
+     * Update medication stock
+     */
+    @Transactional
+    public UserMedicationDto updateStock(Long medicationId, Integer newStock) {
+        UserMedication medication = medicationRepository.findById(medicationId)
+                .orElseThrow(() -> new NotFoundException("Medication not found: " + medicationId));
+
+        medication.setCurrentStock(newStock);
+        medication = medicationRepository.save(medication);
+
+        return UserMedicationDto.fromEntity(medication);
+    }
+
+    /**
+     * Add a new medication (wrapper for createMedication)
+     */
+    @Transactional
+    public UserMedicationDto addMedication(CreateMedicationRequest request) {
+        return createMedication(request.userId(), request);
+    }
+
+    /**
+     * Toggle medication active status
+     */
+    @Transactional
+    public UserMedicationDto toggleActive(Long medicationId) {
+        UserMedication medication = medicationRepository.findById(medicationId)
+                .orElseThrow(() -> new NotFoundException("Medication not found: " + medicationId));
+
+        medication.setActive(!Boolean.TRUE.equals(medication.getActive()));
+        medication = medicationRepository.save(medication);
+
+        if (!Boolean.TRUE.equals(medication.getActive())) {
+            cancelPendingDoses(medicationId);
+        } else {
+            // Generate doses for today if reactivated
+            generateDosesForMedication(medication, LocalDate.now());
+        }
+
+        log.info("Toggled medication {} active status to {}", medicationId, medication.getActive());
+        return UserMedicationDto.fromEntity(medication);
+    }
+
+    /**
+     * Update scheduled times for a medication
+     */
+    @Transactional
+    public UserMedicationDto updateScheduledTimes(Long medicationId, List<LocalTime> times) {
+        UserMedication medication = medicationRepository.findById(medicationId)
+                .orElseThrow(() -> new NotFoundException("Medication not found: " + medicationId));
+
+        medication.setScheduledTimesList(times);
+        medication.setFrequencyPerDay(times.size());
+        medication = medicationRepository.save(medication);
+
+        // Regenerate today's doses with new times
+        cancelPendingDoses(medicationId);
+        generateDosesForMedication(medication, LocalDate.now());
+
+        log.info("Updated scheduled times for medication {}", medicationId);
+        return UserMedicationDto.fromEntity(medication);
+    }
+
+    /**
+     * Toggle reminders for a medication
+     */
+    @Transactional
+    public UserMedicationDto toggleReminders(Long medicationId) {
+        UserMedication medication = medicationRepository.findById(medicationId)
+                .orElseThrow(() -> new NotFoundException("Medication not found: " + medicationId));
+
+        medication.setRemindersEnabled(!medication.getRemindersEnabled());
+        medication = medicationRepository.save(medication);
+
+        log.info("Toggled reminders for medication {} to {}", medicationId, medication.getRemindersEnabled());
+        return UserMedicationDto.fromEntity(medication);
+    }
+
+    /**
+     * Generate daily schedule for a user (returns number of doses created)
+     */
+    @Transactional
+    public int generateDailySchedule(Long userId) {
+        LocalDate today = LocalDate.now();
+        List<UserMedication> activeMeds = medicationRepository.findCurrentlyActiveMedications(userId, today);
+
+        int totalDoses = 0;
+        for (UserMedication med : activeMeds) {
+            List<LocalTime> times = med.getEffectiveScheduledTimes();
+            for (LocalTime time : times) {
+                Optional<DoseLog> existing = doseLogRepository
+                        .findByUserMedicationIdAndScheduledDateAndScheduledTime(med.getId(), today, time);
+
+                if (existing.isEmpty()) {
+                    DoseLog dose = DoseLog.builder()
+                            .user(med.getUser())
+                            .userMedication(med)
+                            .scheduledDate(today)
+                            .scheduledTime(time)
+                            .status(DoseStatus.PENDING)
+                            .build();
+                    doseLogRepository.save(dose);
+                    totalDoses++;
+                }
+            }
+        }
+
+        log.info("Generated {} doses for user {} today", totalDoses, userId);
+        return totalDoses;
+    }
+}

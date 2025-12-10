@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../core/models/dose_models.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 /// Adherence Statistics Page - Shows detailed adherence analytics
 class AdherenceStatsPage extends StatefulWidget {
@@ -38,10 +37,12 @@ class _AdherenceStatsPageState extends State<AdherenceStatsPage> {
     });
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getInt('userId');
+      final userId = await ApiClient.getStoredUserId();
       if (userId == null) {
-        setState(() => _error = 'Please log in first');
+        setState(() {
+          _error = 'Please log in first';
+          _loading = false;
+        });
         return;
       }
 

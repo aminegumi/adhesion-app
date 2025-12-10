@@ -2,6 +2,7 @@ package com.projet.adhesionapp.habit.domain;
 
 import com.projet.adhesionapp.identity.domain.User;
 import com.projet.adhesionapp.treatment.domain.Medication;
+import com.projet.adhesionapp.treatment.domain.UserMedication;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -16,7 +17,8 @@ import java.time.LocalTime;
 @Entity
 @Table(name = "dose_logs", indexes = {
         @Index(name = "idx_dose_log_user_date", columnList = "user_id, scheduled_date"),
-        @Index(name = "idx_dose_log_medication", columnList = "medication_id")
+        @Index(name = "idx_dose_log_medication", columnList = "medication_id"),
+        @Index(name = "idx_dose_log_user_medication", columnList = "user_medication_id")
 })
 @Getter
 @Setter
@@ -33,9 +35,19 @@ public class DoseLog {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @ManyToOne(optional = false)
+    /**
+     * Reference to legacy Medication entity (for backward compatibility)
+     */
+    @ManyToOne
     @JoinColumn(name = "medication_id")
     private Medication medication;
+
+    /**
+     * Reference to new UserMedication entity
+     */
+    @ManyToOne
+    @JoinColumn(name = "user_medication_id")
+    private UserMedication userMedication;
 
     /**
      * The date this dose was scheduled for
@@ -126,6 +138,32 @@ public class DoseLog {
         this.status = DoseStatus.SKIPPED;
         this.skipReason = reason;
         this.notes = notes;
+    }
+
+    /**
+     * Get medication name from either userMedication or legacy medication
+     */
+    public String getMedicationName() {
+        if (userMedication != null) {
+            return userMedication.getName();
+        }
+        if (medication != null) {
+            return medication.getName();
+        }
+        return "Unknown Medication";
+    }
+
+    /**
+     * Get medication dosage from either userMedication or legacy medication
+     */
+    public String getMedicationDosage() {
+        if (userMedication != null) {
+            return userMedication.getDosage();
+        }
+        if (medication != null) {
+            return medication.getDosage();
+        }
+        return null;
     }
 
     public enum DoseStatus {
