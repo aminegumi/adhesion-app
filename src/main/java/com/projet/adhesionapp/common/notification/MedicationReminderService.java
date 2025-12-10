@@ -80,10 +80,10 @@ public class MedicationReminderService {
                 .body(body)
                 .type(NotificationType.MEDICATION_REMINDER)
                 .actionUrl("/doses/" + dose.getId())
-                .data("doseId", dose.getId().toString())
-                .data("medicationId", medication.getId().toString())
-                .data("medicationName", medication.getName())
-                .data("scheduledTime", dose.getScheduledTime().toString())
+                .dataEntry("doseId", dose.getId().toString())
+                .dataEntry("medicationId", medication.getId().toString())
+                .dataEntry("medicationName", medication.getName())
+                .dataEntry("scheduledTime", dose.getScheduledTime().toString())
                 .build();
 
         // Send notification
