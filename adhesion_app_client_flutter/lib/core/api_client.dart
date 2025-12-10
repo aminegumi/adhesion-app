@@ -110,6 +110,17 @@ class ApiClient {
     return list;
   }
 
+  /// Get enhanced adherence prediction using multi-factor evidence-based model
+  Future<AdherencePrediction> getEnhancedPrediction(int userId) async {
+    final uri = Uri.parse('$baseUrl/api/predictions/adherence/$userId');
+    final res = await _client.get(uri);
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    return AdherencePrediction.fromJson(map);
+  }
+
   Future<List<PredictionItem>> getPredictionsHistory(int userId) async {
     final uri = Uri.parse('$baseUrl/api/predictions/user/$userId');
     final res = await _client.get(uri);

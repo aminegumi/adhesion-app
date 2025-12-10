@@ -9,6 +9,7 @@ import '../motivation/motivation_page.dart';
 import '../treatment/treatment_plan_page.dart';
 import '../history/history_page.dart';
 import '../predictions/predictions_page.dart';
+import '../insights/adherence_insights_page.dart';
 import '../auth/login_page.dart';
 import '../doses/todays_doses_page.dart';
 import '../doses/adherence_stats_page.dart';
@@ -409,7 +410,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: _QuickAction(
-                          label: 'Predictions',
+                          label: 'AI Insights',
                           color1: const Color(0xFF065F46),
                           color2: const Color(0xFF0E7490),
                           icon: Icons.insights,
@@ -417,8 +418,9 @@ class _DashboardPageState extends State<DashboardPage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) =>
-                                    PredictionsPage(baseUrl: widget.baseUrl),
+                                builder: (_) => AdherenceInsightsPage(
+                                  baseUrl: widget.baseUrl,
+                                ),
                               ),
                             );
                           },
