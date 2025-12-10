@@ -23,6 +23,6 @@ public class NotificationPayload {
     private String actionUrl;
     private String imageUrl;
 
-    @Singular
+    @Singular("dataEntry")
     private Map<String, String> data;
 }
