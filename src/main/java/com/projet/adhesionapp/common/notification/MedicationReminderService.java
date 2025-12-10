@@ -165,7 +165,7 @@ public class MedicationReminderService {
                 .title(title)
                 .body(body)
                 .type(NotificationType.REFILL_REMINDER)
-                .data("medicationId", medication.getId().toString())
+                .dataEntry("medicationId", medication.getId().toString())
                 .build();
 
         notificationSender.send(payload);
