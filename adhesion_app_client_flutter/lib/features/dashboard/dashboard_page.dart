@@ -7,7 +7,11 @@ import '../profile/profile_page.dart';
 import '../recommendations/recommendations_page.dart';
 import '../motivation/motivation_page.dart';
 import '../treatment/treatment_plan_page.dart';
+import '../history/history_page.dart';
+import '../predictions/predictions_page.dart';
 import '../auth/login_page.dart';
+import '../doses/todays_doses_page.dart';
+import '../doses/adherence_stats_page.dart';
 
 class DashboardPage extends StatefulWidget {
   final String baseUrl;
@@ -111,6 +115,91 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  /// Build a prominent card for Today's Doses - the main CTA
+  Widget _buildTodaysDosesCard(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TodaysDosesPage(baseUrl: widget.baseUrl),
+          ),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF2563EB), Color(0xFF7C3AED)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF2563EB).withOpacity(0.4),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.medication_rounded,
+                color: Colors.white,
+                size: 32,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Today's Medications",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Track your doses and stay on schedule',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.white,
+                size: 16,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -144,7 +233,10 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ],
       ),
-      bottomNavigationBar: _BottomNavBar(currentIndex: 0),
+      bottomNavigationBar: _BottomNavBar(
+        currentIndex: 0,
+        baseUrl: widget.baseUrl,
+      ),
       body: SafeArea(
         child: FutureBuilder<_DashboardData>(
           future: _future,
@@ -209,6 +301,9 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 16),
+                  // TODAY'S DOSES - Prominent card
+                  _buildTodaysDosesCard(context),
                   const SizedBox(height: 16),
                   const Text(
                     'Quick Actions',
@@ -319,16 +414,106 @@ class _DashboardPageState extends State<DashboardPage> {
                           color2: const Color(0xFF0E7490),
                           icon: Icons.insights,
                           onTap: () {
-                            // TODO: navigate to predictions list
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    PredictionsPage(baseUrl: widget.baseUrl),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _QuickAction(
+                          label: "Today's Doses",
+                          color1: const Color(0xFF2563EB),
+                          color2: const Color(0xFF3B82F6),
+                          icon: Icons.medication,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    TodaysDosesPage(baseUrl: widget.baseUrl),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _QuickAction(
+                          label: 'Adherence Stats',
+                          color1: const Color(0xFF7C3AED),
+                          color2: const Color(0xFFA855F7),
+                          icon: Icons.bar_chart,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    AdherenceStatsPage(baseUrl: widget.baseUrl),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _QuickAction(
+                          label: 'History',
+                          color1: const Color(0xFF475569),
+                          color2: const Color(0xFF64748B),
+                          icon: Icons.history,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    HistoryPage(baseUrl: widget.baseUrl),
+                              ),
+                            );
                           },
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Recent Activity',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Recent Activity',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  HistoryPage(baseUrl: widget.baseUrl),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          'See All',
+                          style: TextStyle(
+                            color: Color(0xFF6366F1),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   ..._recentItems(data),
@@ -536,33 +721,75 @@ class _RecentTile extends StatelessWidget {
 
 class _BottomNavBar extends StatelessWidget {
   final int currentIndex;
-  const _BottomNavBar({required this.currentIndex});
+  final String baseUrl;
+  const _BottomNavBar({required this.currentIndex, required this.baseUrl});
 
   @override
   Widget build(BuildContext context) {
-    final baseUrl =
-        (ModalRoute.of(context)?.settings.arguments as String?) ??
-        'http://localhost:8082';
     return NavigationBar(
       selectedIndex: currentIndex,
       onDestinationSelected: (i) {
-        if (i == 1) {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => TestsPage(baseUrl: baseUrl)),
-          );
+        if (i == currentIndex) return; // Already on this tab
+
+        switch (i) {
+          case 0: // Home
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (_) => DashboardPage(baseUrl: baseUrl),
+              ),
+              (route) => false,
+            );
+            break;
+          case 1: // Meds (Today's Doses)
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => TodaysDosesPage(baseUrl: baseUrl),
+              ),
+            );
+            break;
+          case 2: // Tests
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => TestsPage(baseUrl: baseUrl)),
+            );
+            break;
+          case 3: // Stats
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => AdherenceStatsPage(baseUrl: baseUrl),
+              ),
+            );
+            break;
+          case 4: // Profile
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => ProfilePage(baseUrl: baseUrl)),
+            );
+            break;
         }
-        // TODO: other tabs
       },
       destinations: const [
-        NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home),
+          label: 'Home',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.medication_outlined),
+          selectedIcon: Icon(Icons.medication),
+          label: 'Meds',
+        ),
         NavigationDestination(
           icon: Icon(Icons.science_outlined),
+          selectedIcon: Icon(Icons.science),
           label: 'Tests',
         ),
-        NavigationDestination(icon: Icon(Icons.history), label: 'History'),
-        NavigationDestination(icon: Icon(Icons.insights), label: 'Predictions'),
+        NavigationDestination(
+          icon: Icon(Icons.bar_chart_outlined),
+          selectedIcon: Icon(Icons.bar_chart),
+          label: 'Stats',
+        ),
         NavigationDestination(
           icon: Icon(Icons.person_outline),
+          selectedIcon: Icon(Icons.person),
           label: 'Profile',
         ),
       ],

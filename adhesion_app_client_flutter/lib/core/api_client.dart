@@ -10,6 +10,7 @@ import 'models/recommendation_models.dart';
 import 'models/treatment_models.dart';
 import 'models/ai_models.dart';
 import 'models/user_status.dart';
+import 'models/dose_models.dart';
 
 class ApiException implements Exception {
   final int status;
@@ -119,6 +120,70 @@ class ApiClient {
         .map((e) => PredictionItem.fromJson(e as Map<String, dynamic>))
         .toList();
     return list;
+  }
+
+  /// Generate a new prediction for the user based on their profile and adherence data
+  Future<PredictionItem> generatePrediction(int userId) async {
+    // First get the user's profile score
+    double profileScore = 50.0; // default
+    double recentAdherenceRate = 0.5; // default
+
+    try {
+      final profile = await getLatestProfile(userId);
+      if (profile != null) {
+        // Calculate average score from profile using available fields
+        profileScore =
+            ((profile.motivationScore ?? 50) +
+                (profile.selfEfficacyScore ?? 50) +
+                (100 - (profile.anxietyScore ?? 50)) +
+                (100 - (profile.depressionScore ?? 50))) /
+            4;
+      }
+    } catch (e) {
+      print('Could not get profile for prediction: $e');
+    }
+
+    try {
+      final now = DateTime.now();
+      final from =
+          '${now.subtract(const Duration(days: 30)).year}-${now.subtract(const Duration(days: 30)).month.toString().padLeft(2, '0')}-${now.subtract(const Duration(days: 30)).day.toString().padLeft(2, '0')}';
+      final to =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      final history = await getAdherenceHistory(
+        userId: userId,
+        from: from,
+        to: to,
+      );
+      if (history.isNotEmpty) {
+        recentAdherenceRate =
+            history.map((h) => h.adherenceScore).reduce((a, b) => a + b) /
+            history.length /
+            100;
+      }
+    } catch (e) {
+      print('Could not get adherence history for prediction: $e');
+    }
+
+    final uri = Uri.parse('$baseUrl/api/predictions');
+    final now = DateTime.now();
+    final dateStr =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+    final res = await _client.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'userId': userId,
+        'date': dateStr,
+        'profileScore': profileScore,
+        'recentAdherenceRate': recentAdherenceRate,
+      }),
+    );
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    return PredictionItem.fromJson(map);
   }
 
   Future<int> getPlansCount(int userId) async {
@@ -262,6 +327,11 @@ class ApiClient {
     return list;
   }
 
+  /// Alias for getUserRecommendations - gets all recommendations for a user
+  Future<List<Recommendation>> getAllRecommendations(int userId) async {
+    return getUserRecommendations(userId);
+  }
+
   Future<List<Recommendation>> getActiveRecommendations(int userId) async {
     final uri = Uri.parse('$baseUrl/api/recommendations/user/$userId/active');
     final res = await _client.get(uri);
@@ -401,6 +471,105 @@ class ApiClient {
     }
     final map = jsonDecode(res.body) as Map<String, dynamic>;
     return RecommendationResponse.fromJson(map);
+  }
+
+  // ==================== Dose Tracking APIs ====================
+
+  /// Get today's doses for a user
+  Future<List<DoseLog>> getTodaysDoses(int userId) async {
+    final uri = Uri.parse('$baseUrl/api/doses/user/$userId/today');
+    final res = await _client.get(uri);
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    final list = jsonDecode(res.body) as List;
+    return list
+        .map((e) => DoseLog.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Get doses for a specific date
+  Future<List<DoseLog>> getDosesForDate(int userId, DateTime date) async {
+    final dateStr =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final uri = Uri.parse('$baseUrl/api/doses/user/$userId/date/$dateStr');
+    final res = await _client.get(uri);
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    final list = jsonDecode(res.body) as List;
+    return list
+        .map((e) => DoseLog.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Get doses for a date range
+  Future<List<DoseLog>> getDosesForRange(
+    int userId,
+    DateTime from,
+    DateTime to,
+  ) async {
+    final fromStr =
+        '${from.year}-${from.month.toString().padLeft(2, '0')}-${from.day.toString().padLeft(2, '0')}';
+    final toStr =
+        '${to.year}-${to.month.toString().padLeft(2, '0')}-${to.day.toString().padLeft(2, '0')}';
+    final uri = Uri.parse(
+      '$baseUrl/api/doses/user/$userId/range?from=$fromStr&to=$toStr',
+    );
+    final res = await _client.get(uri);
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    final list = jsonDecode(res.body) as List;
+    return list
+        .map((e) => DoseLog.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Mark a dose as taken
+  Future<DoseLog> takeDose(int doseId, {String? notes}) async {
+    final uri = Uri.parse(
+      '$baseUrl/api/doses/$doseId/take${notes != null ? '?notes=${Uri.encodeComponent(notes)}' : ''}',
+    );
+    final res = await _client.post(uri);
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    return DoseLog.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+  }
+
+  /// Mark a dose as skipped
+  Future<DoseLog> skipDose(
+    int doseId,
+    SkipReason reason, {
+    String? notes,
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/doses/$doseId/action');
+    final res = await _client.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'action': 'skip',
+        'skipReason': reason.name.toUpperCase(),
+        'notes': notes,
+      }),
+    );
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    return DoseLog.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+  }
+
+  /// Get adherence statistics
+  Future<AdherenceStats> getAdherenceStats(int userId) async {
+    final uri = Uri.parse('$baseUrl/api/doses/user/$userId/stats');
+    final res = await _client.get(uri);
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    return AdherenceStats.fromJson(
+      jsonDecode(res.body) as Map<String, dynamic>,
+    );
   }
 
   void close() => _client.close();

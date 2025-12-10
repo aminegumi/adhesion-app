@@ -103,11 +103,11 @@
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.8.9</version>
         </dependency>
-        <!-- OpenAI API Client -->
+        <!-- Google Gemini API Client -->
         <dependency>
-            <groupId>com.theokanning.openai-gpt3-java</groupId>
-            <artifactId>service</artifactId>
-            <version>0.18.2</version>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-vertexai</artifactId>
+            <version>1.14.0</version>
         </dependency>
         <!-- WebFlux for reactive HTTP calls -->
         <dependency>
