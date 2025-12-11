@@ -29,7 +29,7 @@ public interface DoseLogRepository extends JpaRepository<DoseLog, Long> {
     /**
      * Find a specific dose log
      */
-    Optional<DoseLog> findByMedicationIdAndScheduledDateAndScheduledTime(
+    Optional<DoseLog> findByMedication_IdAndScheduledDateAndScheduledTime(
             Long medicationId, LocalDate date, LocalTime time);
 
     /**
@@ -96,7 +96,7 @@ public interface DoseLogRepository extends JpaRepository<DoseLog, Long> {
     /**
      * Find all doses for a specific medication
      */
-    List<DoseLog> findByMedicationIdOrderByScheduledDateDescScheduledTimeDesc(Long medicationId);
+    List<DoseLog> findByMedication_IdOrderByScheduledDateDescScheduledTimeDesc(Long medicationId);
 
     /**
      * Count total doses by user
@@ -128,7 +128,7 @@ public interface DoseLogRepository extends JpaRepository<DoseLog, Long> {
     /**
      * Delete all doses for a medication (used when deleting medication)
      */
-    void deleteByMedicationId(Long medicationId);
+    void deleteByMedication_Id(Long medicationId);
 
     /**
      * Delete all doses for a UserMedication

@@ -184,7 +184,7 @@ public class UserMedicationService {
         }
 
         // Delete all associated dose logs first
-        doseLogRepository.deleteByMedicationId(medicationId);
+        doseLogRepository.deleteByUserMedicationId(medicationId);
 
         medicationRepository.deleteById(medicationId);
         log.info("Deleted medication {}", medicationId);

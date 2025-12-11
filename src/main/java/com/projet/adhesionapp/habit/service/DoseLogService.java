@@ -84,7 +84,7 @@ public class DoseLogService {
             for (LocalTime time : times) {
                 // Check if dose log already exists
                 Optional<DoseLog> existing = doseLogRepository
-                        .findByMedicationIdAndScheduledDateAndScheduledTime(med.getId(), date, time);
+                        .findByMedication_IdAndScheduledDateAndScheduledTime(med.getId(), date, time);
 
                 if (existing.isEmpty()) {
                     DoseLog dose = DoseLog.builder()
@@ -113,7 +113,7 @@ public class DoseLogService {
         doseLogRepository.save(dose);
 
         log.info("User {} took dose {} ({}) - delay: {} minutes",
-                dose.getUser().getId(), doseId, dose.getMedication().getName(), dose.getDelayMinutes());
+                dose.getUser().getId(), doseId, dose.getMedicationName(), dose.getDelayMinutes());
 
         return toDto(dose);
     }
@@ -130,7 +130,7 @@ public class DoseLogService {
         doseLogRepository.save(dose);
 
         log.info("User {} skipped dose {} ({}) - reason: {}",
-                dose.getUser().getId(), doseId, dose.getMedication().getName(), reason);
+                dose.getUser().getId(), doseId, dose.getMedicationName(), reason);
 
         return toDto(dose);
     }
@@ -251,7 +251,7 @@ public class DoseLogService {
 
         for (Medication med : medications) {
             List<DoseLog> doses = doseLogRepository
-                    .findByMedicationIdOrderByScheduledDateDescScheduledTimeDesc(med.getId());
+                    .findByMedication_IdOrderByScheduledDateDescScheduledTimeDesc(med.getId());
             long total = doses.stream().filter(d -> d.getStatus() != DoseStatus.PENDING).count();
             long taken = doses.stream().filter(d -> d.getStatus() == DoseStatus.TAKEN).count();
             double rate = total > 0 ? (taken * 100.0 / total) : 0;
@@ -299,9 +299,9 @@ public class DoseLogService {
     private DoseLogDto toDto(DoseLog dose) {
         return new DoseLogDto(
                 dose.getId(),
-                dose.getMedication().getId(),
-                dose.getMedication().getName(),
-                dose.getMedication().getDosage(),
+                dose.getMedicationId(),
+                dose.getMedicationName(),
+                dose.getMedicationDosage(),
                 dose.getScheduledDate(),
                 dose.getScheduledTime(),
                 dose.getStatus(),

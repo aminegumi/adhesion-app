@@ -141,6 +141,20 @@ public class DoseLog {
     }
 
     /**
+     * Get medication ID from either userMedication or legacy medication
+     * Returns null if neither is set
+     */
+    public Long getMedicationId() {
+        if (userMedication != null) {
+            return userMedication.getId();
+        }
+        if (medication != null) {
+            return medication.getId();
+        }
+        return null;
+    }
+
+    /**
      * Get medication name from either userMedication or legacy medication
      */
     public String getMedicationName() {
