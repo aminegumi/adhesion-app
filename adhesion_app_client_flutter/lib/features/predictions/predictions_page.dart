@@ -79,6 +79,87 @@ class _PredictionsPageState extends State<PredictionsPage> {
     }
   }
 
+  Future<void> _deletePrediction(PredictionItem prediction) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Prediction?'),
+        content: Text('Remove the prediction from ${prediction.date}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await _api.deletePrediction(prediction.id);
+      setState(() {
+        _predictions.removeWhere((p) => p.id == prediction.id);
+      });
+      _showSnackBar('Prediction deleted');
+    } catch (e) {
+      _showSnackBar('Failed to delete: $e', isError: true);
+    }
+  }
+
+  Future<void> _clearAllPredictions() async {
+    if (_predictions.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Clear All Predictions?'),
+        content: const Text('This will delete all your prediction history. This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final userId = await ApiClient.getStoredUserId();
+      if (userId == null) return;
+      
+      // Delete all predictions
+      for (final prediction in _predictions) {
+        await _api.deletePrediction(prediction.id);
+      }
+      
+      setState(() => _predictions.clear());
+      _showSnackBar('All predictions cleared');
+    } catch (e) {
+      _showSnackBar('Failed to clear: $e', isError: true);
+    }
+  }
+
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -140,6 +221,19 @@ class _PredictionsPageState extends State<PredictionsPage> {
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
+        if (_predictions.isNotEmpty)
+          IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.delete_sweep, color: Colors.white, size: 18),
+            ),
+            onPressed: _clearAllPredictions,
+            tooltip: 'Clear All Predictions',
+          ),
         Padding(
           padding: const EdgeInsets.only(right: 8),
           child: _generating
@@ -436,6 +530,18 @@ class _PredictionsPageState extends State<PredictionsPage> {
                 Text(
                   prediction.date,
                   style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () => _deletePrediction(prediction),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.delete_outline, size: 16, color: Colors.red.shade400),
+                  ),
                 ),
               ],
             ),

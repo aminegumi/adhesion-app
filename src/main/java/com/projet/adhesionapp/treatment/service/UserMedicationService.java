@@ -6,9 +6,13 @@ import com.projet.adhesionapp.habit.domain.DoseLog.DoseStatus;
 import com.projet.adhesionapp.habit.repo.DoseLogRepository;
 import com.projet.adhesionapp.identity.domain.User;
 import com.projet.adhesionapp.identity.repo.UserRepository;
+import com.projet.adhesionapp.treatment.domain.Medication;
 import com.projet.adhesionapp.treatment.domain.UserMedication;
+import com.projet.adhesionapp.treatment.domain.UserMedication.MedicationForm;
+import com.projet.adhesionapp.treatment.domain.UserMedication.MedicationForm;
 import com.projet.adhesionapp.treatment.model.CreateMedicationRequest;
 import com.projet.adhesionapp.treatment.model.UserMedicationDto;
+import com.projet.adhesionapp.treatment.repo.MedicationRepository;
 import com.projet.adhesionapp.treatment.repo.UserMedicationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,6 +38,7 @@ public class UserMedicationService {
     private final UserMedicationRepository medicationRepository;
     private final DoseLogRepository doseLogRepository;
     private final UserRepository userRepository;
+    private final MedicationRepository planMedicationRepository;
 
     /**
      * Get all medications for a user
@@ -399,5 +405,78 @@ public class UserMedicationService {
 
         log.info("Generated {} doses for user {} today", totalDoses, userId);
         return totalDoses;
+    }
+
+    /**
+     * Sync medications from a treatment plan to the user's medication list
+     * This creates UserMedication entries for medications in the treatment plan
+     * that don't already exist in the user's medication list
+     */
+    @Transactional
+    public List<UserMedicationDto> syncMedicationsFromTreatmentPlan(Long userId, Long treatmentPlanId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User not found: " + userId));
+
+        // Get all medications from the treatment plan
+        List<Medication> planMedications = planMedicationRepository.findByTreatmentPlanId(treatmentPlanId);
+
+        if (planMedications.isEmpty()) {
+            log.info("No medications found in treatment plan {}", treatmentPlanId);
+            return List.of();
+        }
+
+        // Get existing user medications to avoid duplicates
+        List<UserMedication> existingUserMeds = medicationRepository.findByUserId(userId);
+        List<String> existingNames = existingUserMeds.stream()
+                .map(UserMedication::getName)
+                .map(String::toLowerCase)
+                .toList();
+
+        List<UserMedication> newMedications = new ArrayList<>();
+
+        for (Medication planMed : planMedications) {
+            // Check if medication already exists (case-insensitive name match)
+            if (!existingNames.contains(planMed.getName().toLowerCase())) {
+                UserMedication userMed = UserMedication.builder()
+                        .user(user)
+                        .name(planMed.getName())
+                        .dosage(planMed.getDosage())
+                        .form(MedicationForm.TABLET) // Default form, can be updated later
+                        .frequencyPerDay(planMed.getTimesPerDay())
+                        .instructions(planMed.getInstructions())
+                        .startDate(planMed.getStartDate() != null ? planMed.getStartDate() : LocalDate.now())
+                        .endDate(planMed.getEndDate())
+                        .isChronic(planMed.getIsChronic())
+                        .remindersEnabled(planMed.getNotificationsEnabled())
+                        .reminderMinutesBefore(planMed.getReminderMinutesBefore())
+                        .notes(planMed.getNotes())
+                        .reason("From treatment plan") // Indicate source
+                        .build();
+
+                // Set scheduled times if available
+                if (planMed.getScheduledTimes() != null && !planMed.getScheduledTimes().isEmpty()) {
+                    userMed.setScheduledTimes(planMed.getScheduledTimes());
+                }
+
+                newMedications.add(userMed);
+                log.info("Adding medication '{}' from treatment plan {} to user {}", planMed.getName(), treatmentPlanId, userId);
+            } else {
+                log.debug("Medication '{}' already exists for user {}, skipping", planMed.getName(), userId);
+            }
+        }
+
+        if (!newMedications.isEmpty()) {
+            List<UserMedication> savedMeds = medicationRepository.saveAll(newMedications);
+
+            // Generate doses for new medications
+            for (UserMedication med : savedMeds) {
+                generateDosesForMedication(med, LocalDate.now());
+            }
+
+            log.info("Synced {} medications from treatment plan {} to user {}", newMedications.size(), treatmentPlanId, userId);
+            return savedMeds.stream().map(UserMedicationDto::fromEntity).toList();
+        }
+
+        return List.of();
     }
 }

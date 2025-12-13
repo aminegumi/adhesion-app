@@ -170,32 +170,20 @@ class _MyMedicationsPageState extends State<MyMedicationsPage> {
         ],
       ),
       body: _buildBody(),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton.small(
-            heroTag: 'generate',
-            onPressed: _generateSchedule,
-            tooltip: 'Generate Today\'s Schedule',
-            child: const Icon(Icons.schedule),
-          ),
-          const SizedBox(height: 16),
-          FloatingActionButton(
-            heroTag: 'add',
-            onPressed: () async {
-              final result = await Navigator.push<bool>(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AddMedicationPage(),
-                ),
-              );
-              if (result == true) {
-                _loadMedications();
-              }
-            },
-            child: const Icon(Icons.add),
-          ),
-        ],
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'add',
+        onPressed: () async {
+          final result = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const AddMedicationPage(),
+            ),
+          );
+          if (result == true) {
+            _loadMedications();
+          }
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }

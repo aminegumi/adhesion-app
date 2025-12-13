@@ -608,10 +608,10 @@ class _HistoryPageState extends State<HistoryPage> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.5,
+        height: MediaQuery.of(context).size.height * 0.6,
         decoration: const BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: Column(
           children: [
@@ -625,75 +625,185 @@ class _HistoryPageState extends State<HistoryPage> {
               ),
             ),
             Expanded(
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: activity.color.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Icon(
-                            activity.icon,
-                            color: activity.color,
-                            size: 28,
-                          ),
+                    // Header with icon and title
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            activity.color.withOpacity(0.1),
+                            activity.color.withOpacity(0.05),
+                          ],
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _getTypeLabel(activity.type),
-                                style: TextStyle(
-                                  color: activity.color,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                activity.title,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1F2937),
-                                ),
-                              ),
-                            ],
-                          ),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: activity.color.withOpacity(0.2),
                         ),
-                      ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: activity.color.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Icon(
+                              activity.icon,
+                              color: activity.color,
+                              size: 32,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: activity.color.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    _getTypeLabel(activity.type),
+                                    style: TextStyle(
+                                      color: activity.color,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  activity.title,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1F2937),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 24),
-                    _buildDetailRow(
-                      Icons.calendar_today_rounded,
-                      'Date',
-                      _formatFullDate(activity.date),
+                    // Details section
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        children: [
+                          _buildDetailRow(
+                            Icons.calendar_today_rounded,
+                            'Date',
+                            _formatFullDate(activity.date),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildDetailRow(
+                            Icons.access_time_rounded,
+                            'Time',
+                            _formatTime(activity.date),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildDetailRow(
+                            Icons.info_outline_rounded,
+                            'Details',
+                            activity.subtitle,
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 12),
-                    _buildDetailRow(
-                      Icons.access_time_rounded,
-                      'Time',
-                      _formatTime(activity.date),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildDetailRow(
-                      Icons.info_outline_rounded,
-                      'Details',
-                      activity.subtitle,
-                    ),
+                    const SizedBox(height: 24),
+                    // Action buttons based on activity type
+                    if (activity.type == 'test') ...[
+                      _buildActionButton(
+                        icon: Icons.refresh_rounded,
+                        label: 'Retake This Test',
+                        color: activity.color,
+                        onTap: () {
+                          Navigator.pop(context);
+                          // Navigate to tests page
+                        },
+                      ),
+                    ] else if (activity.type == 'prediction') ...[
+                      _buildActionButton(
+                        icon: Icons.insights_rounded,
+                        label: 'View Detailed Analysis',
+                        color: activity.color,
+                        onTap: () {
+                          Navigator.pop(context);
+                          // Navigate to predictions
+                        },
+                      ),
+                    ],
                   ],
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [color, color.withOpacity(0.8)],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -735,23 +845,39 @@ class _HistoryPageState extends State<HistoryPage> {
 
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: Colors.grey.shade500),
-        const SizedBox(width: 12),
-        Text(
-          '$label: ',
-          style: TextStyle(
-            color: Colors.grey.shade600,
-            fontWeight: FontWeight.w500,
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF6366F1).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
           ),
+          child: Icon(icon, size: 18, color: const Color(0xFF6366F1)),
         ),
+        const SizedBox(width: 14),
         Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              color: Color(0xFF1F2937),
-              fontWeight: FontWeight.w600,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: Colors.grey.shade500,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: Color(0xFF1F2937),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+            ],
           ),
         ),
       ],

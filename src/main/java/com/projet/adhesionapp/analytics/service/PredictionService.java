@@ -69,4 +69,14 @@ public class PredictionService {
         return predictionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Prédiction introuvable"));
     }
+
+    public void deleteById(Long id) {
+        predictionRepository.deleteById(id);
+    }
+
+    public void deleteAllForUser(Long userId) {
+        User user = userService.findById(userId);
+        List<Prediction> predictions = predictionRepository.findTop10ByUserOrderByDateDesc(user);
+        predictionRepository.deleteAll(predictions);
+    }
 }

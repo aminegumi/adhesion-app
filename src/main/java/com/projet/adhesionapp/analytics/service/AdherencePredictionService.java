@@ -1,8 +1,10 @@
 package com.projet.adhesionapp.analytics.service;
 
 import com.projet.adhesionapp.ai.service.OpenAIService;
+import com.projet.adhesionapp.analytics.domain.Prediction;
 import com.projet.adhesionapp.analytics.model.AdherencePredictionDto;
 import com.projet.adhesionapp.analytics.model.RiskFactorDto;
+import com.projet.adhesionapp.analytics.repo.PredictionRepository;
 import com.projet.adhesionapp.assessment.domain.TestSession;
 import com.projet.adhesionapp.assessment.domain.TestSessionStatus;
 import com.projet.adhesionapp.assessment.repo.TestSessionRepository;
@@ -52,6 +54,7 @@ public class AdherencePredictionService {
     private final PsychologicalProfileRepository profileRepository;
     private final MedicationRepository medicationRepository;
     private final UserRepository userRepository;
+    private final PredictionRepository predictionRepository;
     private final OpenAIService aiService;
 
     // Weight factors based on research literature
@@ -579,6 +582,40 @@ public class AdherencePredictionService {
         }
 
         return sb.toString();
+    }
+
+    /**
+     * Calculates an adherence score based on the patient's prediction history
+     * @param patientId The patient's ID
+     * @return Adherence score between 0.0 and 1.0
+     */
+    public double calculateAdherenceScore(Long patientId) {
+        User user = userRepository.findById(patientId)
+            .orElseThrow(() -> new NotFoundException("User not found: " + patientId));
+        
+        List<Prediction> predictions = predictionRepository.findTop10ByUserOrderByDateDesc(user);
+
+        if (predictions.isEmpty()) {
+            return 0.5; // Default neutral score for new patients
+        }
+
+        // Calculate weighted average of recent predictions
+        // More recent predictions have higher weight
+        double totalWeight = 0.0;
+        double weightedSum = 0.0;
+
+        for (int i = 0; i < predictions.size(); i++) {
+            Prediction prediction = predictions.get(i);
+            // Exponential decay: recent predictions have higher weight
+            double weight = Math.exp(-i * 0.1); // Decay factor of 0.1
+            weightedSum += (1.0 - prediction.getProbNonAdherence()) * weight;
+            totalWeight += weight;
+        }
+
+        double adherenceScore = weightedSum / totalWeight;
+
+        // Ensure score is between 0.0 and 1.0
+        return Math.max(0.0, Math.min(1.0, adherenceScore));
     }
 
     // Inner classes for analysis results

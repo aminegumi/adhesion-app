@@ -3,8 +3,14 @@ package com.projet.adhesionapp.treatment.web;
 import com.projet.adhesionapp.treatment.domain.DailyTask;
 import com.projet.adhesionapp.treatment.domain.Medication;
 import com.projet.adhesionapp.treatment.domain.TreatmentPlan;
-import com.projet.adhesionapp.treatment.model.*;
+import com.projet.adhesionapp.treatment.model.CreatePlanRequest;
+import com.projet.adhesionapp.treatment.model.DailyTaskDto;
+import com.projet.adhesionapp.treatment.model.MedicationDto;
+import com.projet.adhesionapp.treatment.model.MedicationRequest;
+import com.projet.adhesionapp.treatment.model.TreatmentPlanDto;
+import com.projet.adhesionapp.treatment.model.UserMedicationDto;
 import com.projet.adhesionapp.treatment.service.TreatmentPlanService;
+import com.projet.adhesionapp.treatment.service.UserMedicationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +25,7 @@ import java.util.stream.Collectors;
 public class TreatmentPlanController {
 
     private final TreatmentPlanService treatmentPlanService;
+    private final UserMedicationService userMedicationService;
 
     @PostMapping
     public ResponseEntity<TreatmentPlanDto> createPlan(@Valid @RequestBody CreatePlanRequest request) {
@@ -123,5 +130,15 @@ public class TreatmentPlanController {
     @GetMapping("/medications/user/{userId}/notifications")
     public ResponseEntity<List<MedicationDto>> getMedicationsForNotification(@PathVariable Long userId) {
         return ResponseEntity.ok(treatmentPlanService.getMedicationsForNotification(userId));
+    }
+
+    // ==================== Sync Endpoints ====================
+
+    @PostMapping("/{planId}/sync-medications")
+    public ResponseEntity<List<UserMedicationDto>> syncMedicationsFromPlan(
+            @PathVariable Long planId,
+            @RequestParam Long userId) {
+        List<UserMedicationDto> syncedMeds = userMedicationService.syncMedicationsFromTreatmentPlan(userId, planId);
+        return ResponseEntity.ok(syncedMeds);
     }
 }

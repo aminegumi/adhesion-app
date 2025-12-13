@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../core/models/treatment_models.dart';
+import '../../main.dart';
 
 class TreatmentPlanPage extends StatefulWidget {
   final String baseUrl;
@@ -189,11 +190,10 @@ class _TreatmentPlanPageState extends State<TreatmentPlanPage>
               controller: _tabController,
               children: [_buildTodaysTasksTab(), _buildPlansTab()],
             ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: _createPlan,
         backgroundColor: Colors.green,
-        icon: const Icon(Icons.add),
-        label: const Text('New Plan'),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
@@ -1293,10 +1293,17 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
 }
 
 // Plan details bottom sheet
-class _PlanDetailsSheet extends StatelessWidget {
+class _PlanDetailsSheet extends StatefulWidget {
   final TreatmentPlan plan;
 
   const _PlanDetailsSheet({required this.plan});
+
+  @override
+  State<_PlanDetailsSheet> createState() => _PlanDetailsSheetState();
+}
+
+class _PlanDetailsSheetState extends State<_PlanDetailsSheet> {
+  bool _isSyncing = false;
 
   @override
   Widget build(BuildContext context) {
@@ -1334,7 +1341,7 @@ class _PlanDetailsSheet extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    plan.title,
+                    widget.plan.title,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 24,
@@ -1343,17 +1350,44 @@ class _PlanDetailsSheet extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Icon(
-                        Icons.calendar_today,
-                        size: 16,
-                        color: Colors.white70,
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_today,
+                            size: 16,
+                            color: Colors.white70,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${widget.plan.startDate ?? 'N/A'} - ${widget.plan.endDate ?? 'N/A'}',
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${plan.startDate ?? 'N/A'} - ${plan.endDate ?? 'N/A'}',
-                        style: const TextStyle(color: Colors.white70),
-                      ),
+                      // Sync medications button
+                      if (widget.plan.medicationsList.isNotEmpty)
+                        ElevatedButton.icon(
+                          onPressed: _isSyncing ? null : _syncMedications,
+                          icon: _isSyncing
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : const Icon(Icons.sync, size: 16),
+                          label: Text(_isSyncing ? 'Syncing...' : 'Sync Meds'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white.withOpacity(0.2),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            textStyle: const TextStyle(fontSize: 12),
+                          ),
+                        ),
                     ],
                   ),
                 ],
@@ -1376,7 +1410,7 @@ class _PlanDetailsSheet extends StatelessWidget {
                           children: [
                             const Text('Completion'),
                             Text(
-                              '${plan.progressPercentage}%',
+                              '${widget.plan.progressPercentage}%',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -1387,7 +1421,7 @@ class _PlanDetailsSheet extends StatelessWidget {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
-                            value: plan.progressPercentage / 100,
+                            value: widget.plan.progressPercentage / 100,
                             backgroundColor: Colors.grey[200],
                             valueColor: const AlwaysStoppedAnimation<Color>(
                               Colors.green,
@@ -1401,15 +1435,15 @@ class _PlanDetailsSheet extends StatelessWidget {
                   const SizedBox(height: 20),
 
                   // Focus Areas
-                  if (plan.identifiedIssues != null &&
-                      plan.identifiedIssues!.isNotEmpty)
+                  if (widget.plan.identifiedIssues != null &&
+                      widget.plan.identifiedIssues!.isNotEmpty)
                     _buildSection(
                       'Focus Areas',
                       Icons.center_focus_strong,
                       child: Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: plan.identifiedIssues!
+                        children: widget.plan.identifiedIssues!
                             .split(',')
                             .map(
                               (issue) => Chip(
@@ -1423,31 +1457,31 @@ class _PlanDetailsSheet extends StatelessWidget {
                   const SizedBox(height: 20),
 
                   // Medications List (detailed)
-                  if (plan.medicationsList.isNotEmpty)
+                  if (widget.plan.medicationsList.isNotEmpty)
                     _buildSection(
-                      'Medications (${plan.medicationsList.length})',
+                      'Medications (${widget.plan.medicationsList.length})',
                       Icons.medication,
                       child: Column(
-                        children: plan.medicationsList
+                        children: widget.plan.medicationsList
                             .map((med) => _buildMedicationCard(med))
                             .toList(),
                       ),
                     )
-                  else if (plan.medications != null &&
-                      plan.medications!.isNotEmpty)
+                  else if (widget.plan.medications != null &&
+                      widget.plan.medications!.isNotEmpty)
                     _buildSection(
                       'Medications',
                       Icons.medication,
-                      child: Text(plan.medications!),
+                      child: Text(widget.plan.medications!),
                     ),
                   const SizedBox(height: 20),
 
                   // Plan Content (formatted)
-                  if (plan.planContent != null)
+                  if (widget.plan.planContent != null)
                     _buildSection(
                       'Plan Details',
                       Icons.description,
-                      child: _buildFormattedContent(plan.planContent!),
+                      child: _buildFormattedContent(widget.plan.planContent!),
                     ),
                 ],
               ),
@@ -1456,6 +1490,41 @@ class _PlanDetailsSheet extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _syncMedications() async {
+    setState(() => _isSyncing = true);
+    try {
+      final userId = await ApiClient.getStoredUserId();
+      if (userId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User not found')),
+        );
+        return;
+      }
+
+      final apiClient = ApiClient(baseUrl: AdhesionApp.effectiveBaseUrl());
+      final syncedMeds = await apiClient.syncMedicationsFromTreatmentPlan(
+        widget.plan.id,
+        userId,
+      );
+
+      if (syncedMeds.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Synced ${syncedMeds.length} medication(s) to your list')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('All medications already synced')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to sync medications: $e')),
+      );
+    } finally {
+      setState(() => _isSyncing = false);
+    }
   }
 
   Widget _buildSection(String title, IconData icon, {required Widget child}) {

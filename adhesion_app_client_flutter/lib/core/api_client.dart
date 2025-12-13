@@ -11,6 +11,7 @@ import 'models/treatment_models.dart';
 import 'models/ai_models.dart';
 import 'models/user_status.dart';
 import 'models/dose_models.dart';
+import '../features/medications/models/user_medication.dart';
 
 class ApiException implements Exception {
   final int status;
@@ -79,6 +80,11 @@ class ApiClient {
   static Future<String?> getStoredUserName() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('user_display_name');
+  }
+
+  static Future<int?> getStoredUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('user_id');
   }
 
   static Future<void> saveUserInfo(
@@ -197,6 +203,15 @@ class ApiClient {
     return PredictionItem.fromJson(map);
   }
 
+  /// Delete a prediction by ID
+  Future<void> deletePrediction(int predictionId) async {
+    final uri = Uri.parse('$baseUrl/api/predictions/$predictionId');
+    final res = await _client.delete(uri);
+    if (res.statusCode != 200 && res.statusCode != 204) {
+      throw ApiException(res.statusCode, res.body);
+    }
+  }
+
   Future<int> getPlansCount(int userId) async {
     final uri = Uri.parse('$baseUrl/api/plans/user/$userId');
     final res = await _client.get(uri);
@@ -273,12 +288,6 @@ class ApiClient {
         .map((e) => TestResultDto.fromJson(e as Map<String, dynamic>))
         .toList();
     return list;
-  }
-
-  static Future<int?> getStoredUserId() async {
-    final prefs = await SharedPreferences.getInstance();
-    final id = prefs.getInt('user_id');
-    return id;
   }
 
   // ==================== PSYCHOLOGICAL PROFILE APIs ====================
@@ -440,6 +449,18 @@ class ApiClient {
     return DailyTask.fromJson(map);
   }
 
+  Future<List<UserMedication>> syncMedicationsFromTreatmentPlan(int planId, int userId) async {
+    final uri = Uri.parse('$baseUrl/api/treatment-plans/$planId/sync-medications?userId=$userId');
+    final res = await _client.post(uri);
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    final list = (jsonDecode(res.body) as List)
+        .map((e) => UserMedication.fromJson(e as Map<String, dynamic>))
+        .toList();
+    return list;
+  }
+
   // ==================== AI APIs ====================
 
   Future<MotivationResponse> getMotivation(
@@ -449,6 +470,35 @@ class ApiClient {
     final uri = Uri.parse('$baseUrl/api/ai/motivation');
     final body = {
       'userId': userId,
+      if (adherenceScore != null) 'adherenceScore': adherenceScore,
+    };
+    final res = await _client.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    return MotivationResponse.fromJson(map);
+  }
+
+  Future<MotivationResponse> askAI(
+    int userId,
+    String userMessage,
+    List<ChatMessage> conversationHistory, {
+    double? adherenceScore,
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/ai/motivation');
+    final body = {
+      'userId': userId,
+      'userMessage': userMessage,
+      'conversationHistory': conversationHistory.map((msg) => {
+        'role': msg.role,
+        'content': msg.content,
+        'timestamp': msg.timestamp.millisecondsSinceEpoch,
+      }).toList(),
       if (adherenceScore != null) 'adherenceScore': adherenceScore,
     };
     final res = await _client.post(
@@ -482,6 +532,78 @@ class ApiClient {
     }
     final map = jsonDecode(res.body) as Map<String, dynamic>;
     return RecommendationResponse.fromJson(map);
+  }
+
+  /// Detect emotions from user's text input
+  Future<EmotionResult> detectEmotions(int userId, String text) async {
+    final uri = Uri.parse('$baseUrl/api/ai/detect-emotions');
+    final body = {
+      'userId': userId,
+      'text': text,
+    };
+    final res = await _client.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    return EmotionResult.fromJson(map);
+  }
+
+  /// Analyze facial emotion from image
+  Future<FacialEmotionResult> analyzeFacialEmotion(int userId, List<int> imageBytes) async {
+    final uri = Uri.parse('$baseUrl/api/ai/analyze-facial-emotion');
+    final request = http.MultipartRequest('POST', uri)
+      ..fields['userId'] = userId.toString()
+      ..files.add(http.MultipartFile.fromBytes('image', imageBytes, filename: 'image.jpg'));
+    final streamedResponse = await request.send();
+    final res = await http.Response.fromStream(streamedResponse);
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    return FacialEmotionResult.fromJson(map);
+  }
+
+  /// Send a conversational message to the health assistant
+  Future<MotivationResponse> sendMotivationMessage(
+    int userId,
+    String userMessage,
+    double? adherenceScore,
+    List<Map<String, dynamic>> conversationHistory,
+  ) async {
+    final uri = Uri.parse('$baseUrl/api/ai/motivation');
+    final body = {
+      'userId': userId,
+      'userMessage': userMessage,
+      'adherenceScore': adherenceScore,
+      'conversationHistory': conversationHistory,
+    };
+    final res = await _client.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    return MotivationResponse.fromJson(map);
+  }
+
+  /// Get adherence score for a user
+  Future<double> getAdherenceScore(int userId) async {
+    final uri = Uri.parse('$baseUrl/api/doses/user/$userId/stats');
+    final res = await _client.get(uri);
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    // Extract overallAdherenceRate from the AdherenceStatsDto
+    return (map['overallAdherenceRate'] as num?)?.toDouble() ?? 0.0;
   }
 
   // ==================== Dose Tracking APIs ====================

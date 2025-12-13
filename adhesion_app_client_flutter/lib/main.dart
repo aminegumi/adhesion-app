@@ -1,10 +1,21 @@
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'features/auth/login_page.dart';
+import 'core/theme/app_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Set system UI style
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+    systemNavigationBarColor: Color(0xFF1A1A2E),
+    systemNavigationBarIconBrightness: Brightness.light,
+  ));
+  
   runApp(const AdhesionApp());
 }
 
@@ -22,37 +33,12 @@ class AdhesionApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final baseUrl = effectiveBaseUrl();
-    final color = Colors.blue;
+    
     return MaterialApp(
-      title: 'Adhesion App',
-      theme: ThemeData(
-        brightness: Brightness.light,
-        scaffoldBackgroundColor: const Color(0xFFF7F8FA),
-        colorScheme: ColorScheme.fromSeed(seedColor: color),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.white,
-          hintStyle: const TextStyle(color: Color(0xFF9AA4B2)),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: color.shade600, width: 1.5),
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 14,
-          ),
-        ),
-      ),
+      title: 'Serenity - Mental Health',
+      debugShowCheckedModeBanner: false,
+      theme: buildAppTheme(),
       home: LoginPage(baseUrl: baseUrl),
-      // Optionally: decide start page based on stored token/user
     );
   }
 }

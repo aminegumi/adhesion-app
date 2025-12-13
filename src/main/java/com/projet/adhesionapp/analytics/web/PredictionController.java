@@ -54,4 +54,14 @@ public class PredictionController {
                         p.getTopFeaturesJson()))
                 .toList();
     }
+
+    @DeleteMapping("/{id}")
+    public void delete(@PathVariable Long id) {
+        predictionService.deleteById(id);
+    }
+
+    @DeleteMapping("/user/{userId}")
+    public void deleteAllForUser(@PathVariable Long userId) {
+        predictionService.deleteAllForUser(userId);
+    }
 }
