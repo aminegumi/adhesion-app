@@ -4,6 +4,7 @@ class RegisterRequest {
   final String displayName;
   final String birthDate; // YYYY-MM-DD
   final String gender; // "Male" | "Female"
+  final bool consentGiven; // Data sharing consent
 
   RegisterRequest({
     required this.email,
@@ -11,6 +12,7 @@ class RegisterRequest {
     required this.displayName,
     required this.birthDate,
     required this.gender,
+    this.consentGiven = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -19,5 +21,6 @@ class RegisterRequest {
     'displayName': displayName,
     'birthDate': birthDate,
     'gender': gender,
+    'consentGiven': consentGiven,
   };
 }

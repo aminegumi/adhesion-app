@@ -68,7 +68,7 @@ emotion_history = []
 cached_box = None
 
 # OpenRouter API Configuration
-OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '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')
+OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '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')
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_MODEL = "google/gemini-2.0-flash-001"
 

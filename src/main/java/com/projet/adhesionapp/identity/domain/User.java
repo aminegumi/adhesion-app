@@ -43,6 +43,20 @@ public class User {
     @Column(nullable = false)
     private Boolean active;
 
+    /**
+     * User role: USER or ADMIN
+     */
+    @Column(length = 20, columnDefinition = "varchar(20) default 'USER'")
+    @Builder.Default
+    private String role = "USER";
+
+    /**
+     * Whether user has given data sharing consent (convenience field)
+     */
+    @Column(columnDefinition = "boolean default false")
+    @Builder.Default
+    private Boolean consentGiven = false;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -95,6 +109,12 @@ public class User {
         }
         if (completedTestsCount == null) {
             completedTestsCount = 0;
+        }
+        if (role == null) {
+            role = "USER";
+        }
+        if (consentGiven == null) {
+            consentGiven = false;
         }
     }
 

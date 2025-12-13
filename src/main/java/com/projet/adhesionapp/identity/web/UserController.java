@@ -3,10 +3,12 @@ package com.projet.adhesionapp.identity.web;
 import com.projet.adhesionapp.identity.domain.User;
 import com.projet.adhesionapp.identity.model.UserStatusDto;
 import com.projet.adhesionapp.identity.service.UserService;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -70,4 +72,39 @@ public class UserController {
         userService.activate(id);
     }
 
+    /**
+     * Update user profile
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<User> updateProfile(@PathVariable Long id,
+                                              @RequestBody UpdateProfileRequest request) {
+        User updated = userService.updateProfile(
+            id,
+            request.getDisplayName(),
+            request.getEmail(),
+            request.getGender(),
+            request.getBirthDate(),
+            request.getConsentGiven()
+        );
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * Update consent status only
+     */
+    @PutMapping("/{id}/consent")
+    public ResponseEntity<User> updateConsent(@PathVariable Long id,
+                                              @RequestParam boolean consent) {
+        User updated = userService.updateConsent(id, consent);
+        return ResponseEntity.ok(updated);
+    }
+
+    @Data
+    public static class UpdateProfileRequest {
+        private String displayName;
+        private String email;
+        private String gender;
+        private LocalDate birthDate;
+        private Boolean consentGiven;
+    }
 }

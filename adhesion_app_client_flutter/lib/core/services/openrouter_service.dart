@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 /// Service for interacting with OpenRouter AI API
 class OpenRouterService {
   // OpenRouter API configuration
-  static const String _apiKey = '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';
+  static const String _apiKey = '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';
   static const String _apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
   
   // Using Alibaba Tongyi DeepResearch model (free tier)

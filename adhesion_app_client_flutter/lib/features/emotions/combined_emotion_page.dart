@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'dart:html' as html;
-import 'dart:ui_web' as ui_web;
 import '../../core/api_client.dart';
 import '../../core/services/openrouter_service.dart';
 
@@ -25,24 +23,17 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
   late Animation<double> _pulseAnimation;
   
   String _currentEmotion = 'Neutral';
-  String _lastAdviceEmotion = '';
   double _confidence = 0.5;
   bool _isConnected = false;
   bool _flaskConnected = false;
   bool _isStreaming = false;
-  bool _isScanning = false; // 12-second scan in progress
-  int _scanSecondsLeft = 0;
   Timer? _emotionTimer;
-  Timer? _countdownTimer;
   String? _error;
   String? _aiAdvice;
   bool _loadingAdvice = false;
   
-  // Collect emotions during 12-second scan
-  final List<Map<String, dynamic>> _scanResults = [];
-  
-  // Use localhost for web, the Flask server runs on your PC
-  final String _flaskUrl = 'http://localhost:5000';
+  // For Android emulator use 10.0.2.2, for physical device use your PC's IP
+  final String _flaskUrl = 'http://10.0.2.2:5000';
   final TextEditingController _textController = TextEditingController();
   final List<Map<String, dynamic>> _emotionHistory = [];
 
@@ -125,35 +116,20 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
       final userId = await ApiClient.getStoredUserId();
       setState(() => _isConnected = userId != null);
 
-      // Test Flask connection with retry
-      await _connectToFlask();
+      // Test Flask connection
+      try {
+        final response = await http.get(Uri.parse('$_flaskUrl/health')).timeout(
+          const Duration(seconds: 3),
+        );
+        if (response.statusCode == 200) {
+          setState(() => _flaskConnected = true);
+        }
+      } catch (e) {
+        print('Flask server not available: $e');
+      }
     } catch (e) {
       setState(() => _error = 'Connection error: $e');
     }
-  }
-
-  Future<void> _connectToFlask() async {
-    for (int attempt = 0; attempt < 3; attempt++) {
-      try {
-        final response = await http.get(Uri.parse('$_flaskUrl/health')).timeout(
-          const Duration(seconds: 5),
-        );
-        if (response.statusCode == 200) {
-          setState(() {
-            _flaskConnected = true;
-            _error = null;
-          });
-          print('✅ Flask connected successfully');
-          return;
-        }
-      } catch (e) {
-        print('Flask connection attempt ${attempt + 1} failed: $e');
-        if (attempt < 2) {
-          await Future.delayed(const Duration(milliseconds: 500));
-        }
-      }
-    }
-    print('⚠️ Flask server not available after 3 attempts');
   }
 
   Future<void> _analyzeTextEmotion() async {
@@ -241,130 +217,27 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
       return;
     }
 
-    if (_isScanning) {
-      // Cancel ongoing scan
-      _cancelScan();
-      return;
-    }
+    setState(() {
+      _isStreaming = !_isStreaming;
+      _error = null;
+    });
 
     if (_isStreaming) {
-      // Stop streaming
-      setState(() {
-        _isStreaming = false;
-        _error = null;
-      });
-      _emotionTimer?.cancel();
-      _countdownTimer?.cancel();
+      _startEmotionPolling();
     } else {
-      // Start 5-second emotion scan
-      _startEmotionScan();
+      _emotionTimer?.cancel();
     }
   }
 
-  void _startEmotionScan() {
-    setState(() {
-      _isStreaming = true;
-      _isScanning = true;
-      _scanSecondsLeft = 12;
-      _scanResults.clear();
-      _error = null;
-      _aiAdvice = null;
-    });
-
-    // Start countdown timer
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() => _scanSecondsLeft--);
-      if (_scanSecondsLeft <= 0) {
-        timer.cancel();
-        _finishScan();
-      }
-    });
-
-    // Poll emotions every 500ms during scan
-    _emotionTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) async {
-      if (!_isScanning) {
+  void _startEmotionPolling() {
+    _emotionTimer?.cancel();
+    _emotionTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
+      if (!_isStreaming) {
         timer.cancel();
         return;
       }
-      await _collectEmotion();
+      await _fetchCurrentEmotion();
     });
-  }
-
-  void _cancelScan() {
-    _emotionTimer?.cancel();
-    _countdownTimer?.cancel();
-    setState(() {
-      _isStreaming = false;
-      _isScanning = false;
-      _scanSecondsLeft = 0;
-      _scanResults.clear();
-    });
-  }
-
-  Future<void> _collectEmotion() async {
-    try {
-      final response = await http.get(Uri.parse('$_flaskUrl/emotion'));
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final emotion = (data['emotion'] ?? 'Neutral').toString().toLowerCase();
-        final confidence = (data['confidence'] ?? 0.5).toDouble();
-        
-        // Update display in real-time
-        setState(() {
-          _currentEmotion = emotion;
-          _confidence = confidence;
-        });
-        
-        // Collect for analysis
-        _scanResults.add({
-          'emotion': emotion,
-          'confidence': confidence,
-        });
-      }
-    } catch (e) {
-      print('Failed to fetch emotion: $e');
-    }
-  }
-
-  void _finishScan() {
-    _emotionTimer?.cancel();
-    _countdownTimer?.cancel();
-    
-    // Calculate dominant emotion
-    final emotionCounts = <String, int>{};
-    final emotionConfidences = <String, double>{};
-    
-    for (final result in _scanResults) {
-      final emotion = result['emotion'] as String;
-      final confidence = result['confidence'] as double;
-      
-      emotionCounts[emotion] = (emotionCounts[emotion] ?? 0) + 1;
-      emotionConfidences[emotion] = (emotionConfidences[emotion] ?? 0) + confidence;
-    }
-    
-    // Find dominant emotion (most frequent with highest average confidence)
-    String dominantEmotion = 'neutral';
-    int maxCount = 0;
-    double maxAvgConfidence = 0;
-    
-    emotionCounts.forEach((emotion, count) {
-      final avgConfidence = emotionConfidences[emotion]! / count;
-      if (count > maxCount || (count == maxCount && avgConfidence > maxAvgConfidence)) {
-        maxCount = count;
-        maxAvgConfidence = avgConfidence;
-        dominantEmotion = emotion;
-      }
-    });
-    
-    setState(() {
-      _isScanning = false;
-      _isStreaming = false;
-      _currentEmotion = dominantEmotion;
-      _confidence = maxAvgConfidence;
-    });
-    
-    // Get AI advice for the dominant emotion
-    _getEmotionAdvice(dominantEmotion);
   }
 
   Future<void> _fetchCurrentEmotion() async {
@@ -372,55 +245,14 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
       final response = await http.get(Uri.parse('$_flaskUrl/emotion'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final newEmotion = (data['emotion'] ?? 'Neutral').toString().toLowerCase();
-        final newConfidence = (data['confidence'] ?? 0.5).toDouble();
-        
         setState(() {
-          _currentEmotion = newEmotion;
-          _confidence = newConfidence;
+          _currentEmotion = (data['emotion'] ?? 'Neutral').toString().toLowerCase();
+          _confidence = (data['confidence'] ?? 0.5).toDouble();
         });
       }
     } catch (e) {
       print('Failed to fetch emotion: $e');
     }
-  }
-
-  Future<void> _getEmotionAdvice(String emotion) async {
-    if (_loadingAdvice) return;
-    
-    setState(() => _loadingAdvice = true);
-    
-    try {
-      // Get advice from Flask AI backend
-      final response = await http.post(
-        Uri.parse('$_flaskUrl/chat'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'message': 'I am feeling $emotion right now. Can you give me some supportive advice?',
-          'history': [],
-        }),
-      );
-      
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          _aiAdvice = data['bot_message'] ?? _getDefaultAdvice(emotion);
-        });
-      } else {
-        setState(() => _aiAdvice = _getDefaultAdvice(emotion));
-      }
-    } catch (e) {
-      print('Failed to get AI advice: $e');
-      setState(() => _aiAdvice = _getDefaultAdvice(emotion));
-    } finally {
-      setState(() => _loadingAdvice = false);
-    }
-  }
-
-  Future<void> _analyzeCurrentEmotion() async {
-    // Get advice for the current detected emotion from camera
-    _lastAdviceEmotion = ''; // Reset to force new advice
-    await _getEmotionAdvice(_currentEmotion);
   }
 
   EmotionVisual _getVisual(String emotion) {
@@ -577,11 +409,9 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
             ],
           ),
           const SizedBox(height: 20),
-          // Camera toggle button with scan progress
+          // Camera toggle button
           Material(
-            color: _isScanning 
-                ? Colors.orange.withOpacity(0.3) 
-                : Colors.white.withOpacity(0.2),
+            color: Colors.white.withOpacity(0.2),
             borderRadius: BorderRadius.circular(16),
             child: InkWell(
               onTap: _toggleStreaming,
@@ -592,41 +422,19 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    if (_isScanning) ...[
-                      SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          value: (12 - _scanSecondsLeft) / 12,
-                          strokeWidth: 2.5,
-                          color: Colors.white,
-                          backgroundColor: Colors.white.withOpacity(0.3),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Scanning... ${_scanSecondsLeft}s',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ] else ...[
-                      Icon(
-                        _isStreaming ? Icons.videocam_off_rounded : Icons.center_focus_strong_rounded,
+                    Icon(
+                      _isStreaming ? Icons.videocam_off_rounded : Icons.videocam_rounded,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      _isStreaming ? 'Stop Camera' : 'Start Camera Detection',
+                      style: const TextStyle(
                         color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
                       ),
-                      const SizedBox(width: 10),
-                      Text(
-                        _isStreaming ? 'Stop Camera' : '🎯 Start 12s Emotion Scan',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ],
+                    ),
                   ],
                 ),
               ),
@@ -695,83 +503,60 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
   }
 
   Widget _buildCameraFeed() {
-    // Register the HTML element for web
-    final String viewType = 'camera-feed-${DateTime.now().millisecondsSinceEpoch}';
-    
-    // ignore: undefined_prefixed_name
-    ui_web.platformViewRegistry.registerViewFactory(viewType, (int viewId) {
-      final img = html.ImageElement()
-        ..src = '$_flaskUrl/video'
-        ..style.width = '100%'
-        ..style.height = '100%'
-        ..style.objectFit = 'cover'
-        ..style.borderRadius = '20px';
-      return img;
-    });
-
-    return Stack(
-      children: [
-        Container(
-          height: 280,
-          margin: const EdgeInsets.symmetric(horizontal: 20),
-          decoration: BoxDecoration(
-            color: Colors.black,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
+    return Container(
+      height: 280,
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: HtmlElementView(viewType: viewType),
-          ),
-        ),
-        // Scanning overlay - small timer at bottom left
-        if (_isScanning)
-          Positioned(
-            left: 32,
-            bottom: 16,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.6),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.orange,
-                  width: 2,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Image.network(
+          '$_flaskUrl/video',
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      value: (12 - _scanSecondsLeft) / 12,
-                      strokeWidth: 3,
-                      color: Colors.orange,
-                      backgroundColor: Colors.white.withOpacity(0.3),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
+                  CircularProgressIndicator(color: Colors.white),
+                  SizedBox(height: 12),
+                  Text('Connecting to camera...', style: TextStyle(color: Colors.white70)),
+                ],
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.videocam_off, size: 48, color: Colors.grey.shade600),
+                  const SizedBox(height: 12),
                   Text(
-                    '${_scanSecondsLeft}s',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    'Camera feed unavailable',
+                    style: TextStyle(color: Colors.grey.shade400),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Ensure Flask server is running',
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                   ),
                 ],
               ),
-            ),
-          ),
-      ],
+            );
+          },
+        ),
+      ),
     );
   }
 

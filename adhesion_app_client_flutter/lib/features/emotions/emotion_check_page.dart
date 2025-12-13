@@ -25,20 +25,14 @@ class _EmotionCheckPageState extends State<EmotionCheckPage> {
 
   Future<void> _initializeFlaskConnection() async {
     try {
-      final response = await http.get(
-        Uri.parse('$_flaskUrl/health'),
-      ).timeout(const Duration(seconds: 5));
-      
+      final response = await http.get(Uri.parse('$_flaskUrl/'));
       if (response.statusCode == 200) {
-        setState(() {
-          _isConnected = true;
-          _error = null;
-        });
+        setState(() => _isConnected = true);
       } else {
         setState(() => _error = 'Could not connect to emotion detection service');
       }
     } catch (e) {
-      setState(() => _error = 'Flask server not available. Make sure it\'s running on port 5000.');
+      setState(() => _error = 'Flask service not available: $e');
     }
   }
 

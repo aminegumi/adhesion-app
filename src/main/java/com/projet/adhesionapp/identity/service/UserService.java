@@ -26,6 +26,15 @@ public class UserService {
             String displayName,
             LocalDate birthDate,
             String gender) {
+        return register(email, rawPassword, displayName, birthDate, gender, false);
+    }
+
+    public User register(String email,
+            String rawPassword,
+            String displayName,
+            LocalDate birthDate,
+            String gender,
+            boolean consentGiven) {
 
         if (userRepository.existsByEmail(email)) {
             throw new BadRequestException("Un utilisateur existe déjà avec cet email.");
@@ -41,6 +50,8 @@ public class UserService {
                 .onboardingCompleted(false)
                 .requiredTestsCount(2)
                 .completedTestsCount(0)
+                .role("USER")
+                .consentGiven(consentGiven)
                 .build();
 
         return userRepository.save(user);
@@ -78,6 +89,94 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Utilisateur introuvable."));
         user.setActive(true);
+    }
+
+    /**
+     * Update user profile information
+     */
+    public User updateProfile(Long id, String displayName, String email, String gender, 
+                             LocalDate birthDate, Boolean consentGiven) {
+        User user = findById(id);
+        
+        if (displayName != null && !displayName.isBlank()) {
+            user.setDisplayName(displayName);
+        }
+        if (email != null && !email.isBlank()) {
+            // Check if email is taken by another user
+            if (!email.equals(user.getEmail()) && userRepository.existsByEmail(email)) {
+                throw new BadRequestException("Cet email est déjà utilisé.");
+            }
+            user.setEmail(email);
+        }
+        if (gender != null && !gender.isBlank()) {
+            user.setGender(gender);
+        }
+        if (birthDate != null) {
+            user.setBirthDate(birthDate);
+        }
+        if (consentGiven != null) {
+            user.setConsentGiven(consentGiven);
+        }
+        
+        return userRepository.save(user);
+    }
+
+    /**
+     * Update only consent status
+     */
+    public User updateConsent(Long id, boolean consentGiven) {
+        User user = findById(id);
+        user.setConsentGiven(consentGiven);
+        return userRepository.save(user);
+    }
+
+    /**
+     * Find all users who have given consent
+     */
+    @Transactional(readOnly = true)
+    public List<User> findConsentedUsers() {
+        return userRepository.findByConsentGivenTrueAndActiveTrue();
+    }
+
+    /**
+     * Find users by role
+     */
+    @Transactional(readOnly = true)
+    public List<User> findByRole(String role) {
+        return userRepository.findByRole(role);
+    }
+
+    /**
+     * Create an admin user
+     */
+    public User createAdmin(String email, String rawPassword, String displayName,
+                           String birthDateStr, String gender) {
+        if (userRepository.existsByEmail(email)) {
+            throw new BadRequestException("Un utilisateur existe déjà avec cet email.");
+        }
+
+        LocalDate birthDate;
+        try {
+            birthDate = LocalDate.parse(birthDateStr);
+        } catch (Exception e) {
+            birthDate = LocalDate.of(1990, 1, 1);
+        }
+
+        User admin = User.builder()
+                .email(email)
+                .passwordHash(passwordEncoder.encode(rawPassword))
+                .displayName(displayName)
+                .birthDate(birthDate)
+                .gender(gender != null ? gender : "Other")
+                .active(true)
+                .onboardingCompleted(true)
+                .requiredTestsCount(0)
+                .completedTestsCount(0)
+                .role("ADMIN")
+                .consentGiven(true)
+                .build();
+
+        return userRepository.save(admin);
     }
 
     /**

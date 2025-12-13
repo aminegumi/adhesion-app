@@ -27,4 +27,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * Find active users for notifications
      */
     List<User> findByActiveTrue();
+
+    /**
+     * Find users who have given data sharing consent
+     */
+    List<User> findByConsentGivenTrueAndActiveTrue();
+
+    /**
+     * Find users by role
+     */
+    List<User> findByRole(String role);
 }

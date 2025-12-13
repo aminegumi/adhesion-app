@@ -32,7 +32,8 @@ public class AuthController {
                 request.getPassword(),
                 request.getDisplayName(),
                 request.getBirthDate(),
-                request.getGender()
+                request.getGender(),
+                request.getConsentGiven() != null ? request.getConsentGiven() : false
         );
     }
 
@@ -63,6 +64,8 @@ public class AuthController {
 
         @NotBlank
         private String gender;
+
+        private Boolean consentGiven;
     }
 
     @Data

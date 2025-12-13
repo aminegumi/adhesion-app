@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:io';
 import '../../core/api_client.dart';
 
 class CameraEmotionPage extends StatefulWidget {
@@ -21,13 +19,7 @@ class _CameraEmotionPageState extends State<CameraEmotionPage>
   String? _error;
   final TextEditingController _questionController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
-  // Dynamic Flask URL - 10.0.2.2 for Android emulator, localhost for web/desktop
-  String get _flaskUrl {
-    if (kIsWeb) return 'http://localhost:5000';
-    if (Platform.isAndroid) return 'http://10.0.2.2:5000';
-    return 'http://localhost:5000';
-  }
+  String _flaskUrl = 'http://localhost:5000'; // Flask app URL
   String _currentEmotion = 'Neutral';
   bool _isConnected = false;
 
@@ -48,23 +40,17 @@ class _CameraEmotionPageState extends State<CameraEmotionPage>
 
   Future<void> _initializeFlaskConnection() async {
     try {
-      // Test connection to Flask app using health endpoint
-      final response = await http.get(
-        Uri.parse('$_flaskUrl/health'),
-      ).timeout(const Duration(seconds: 5));
-      
+      // Test connection to Flask app
+      final response = await http.get(Uri.parse('$_flaskUrl/'));
       if (response.statusCode == 200) {
-        setState(() {
-          _isConnected = true;
-          _error = null;
-        });
+        setState(() => _isConnected = true);
         // Initialize the bot with current emotion
         await _initializeBot();
       } else {
         setState(() => _error = 'Could not connect to emotion detection service');
       }
     } catch (e) {
-      setState(() => _error = 'Flask server not available. Make sure it\'s running on port 5000.');
+      setState(() => _error = 'Flask service not available: $e');
     }
   }
 
