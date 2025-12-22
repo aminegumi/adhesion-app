@@ -6,6 +6,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../core/api_client.dart';
 import '../../core/services/openrouter_service.dart';
+import 'mobile_camera_view.dart';
+
+// Conditional import for web
+import 'web_camera_stub.dart' if (dart.library.html) 'web_camera_view.dart';
 
 class CombinedEmotionPage extends StatefulWidget {
   final String baseUrl;
@@ -17,11 +21,15 @@ class CombinedEmotionPage extends StatefulWidget {
 }
 
 class _CombinedEmotionPageState extends State<CombinedEmotionPage>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late final ApiClient _apiClient;
   late final OpenRouterService _aiService;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  
+  // Keep alive to prevent disconnect on page refresh/navigation
+  @override
+  bool get wantKeepAlive => true;
   
   String _currentEmotion = 'Neutral';
   double _confidence = 0.5;
@@ -38,7 +46,14 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
   final Map<String, int> _emotionCounts = {}; // Track emotion frequencies for auto-detect
   
   // Dynamic Flask URL based on platform
+  // For REAL PHONE testing: Replace with your computer's IP address
+  // Run 'ipconfig' in terminal to find your IP (e.g., 192.168.1.x)
+  static const String _realDeviceIP = '192.168.1.100'; // <-- CHANGE THIS to your PC's IP for real phone testing
+  static const bool _useRealDevice = false; // Set to true when testing on real phone
+  
   String get _flaskUrl {
+    // For real device testing (physical phone)
+    if (_useRealDevice && !kIsWeb) return 'http://$_realDeviceIP:5000';
     // For web, use localhost
     if (kIsWeb) return 'http://localhost:5000';
     // For Android emulator use 10.0.2.2
@@ -127,22 +142,54 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
   Future<void> _initializeConnection() async {
     try {
       final userId = await ApiClient.getStoredUserId();
-      setState(() => _isConnected = userId != null);
+      if (mounted) {
+        setState(() => _isConnected = userId != null);
+      }
 
-      // Test Flask connection
+      // Test Flask connection with retry
+      await _connectToFlask();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = 'Connection error: $e');
+      }
+    }
+  }
+
+  Future<void> _connectToFlask() async {
+    for (int attempt = 0; attempt < 3; attempt++) {
       try {
         final response = await http.get(Uri.parse('$_flaskUrl/health')).timeout(
-          const Duration(seconds: 3),
+          const Duration(seconds: 5),
         );
         if (response.statusCode == 200) {
-          setState(() => _flaskConnected = true);
+          if (mounted) {
+            setState(() {
+              _flaskConnected = true;
+              _error = null;
+            });
+          }
+          print('✅ Flask connected on attempt ${attempt + 1}');
+          return;
         }
       } catch (e) {
-        print('Flask server not available: $e');
+        print('Flask connection attempt ${attempt + 1} failed: $e');
+        if (attempt < 2) {
+          await Future.delayed(const Duration(seconds: 1));
+        }
       }
-    } catch (e) {
-      setState(() => _error = 'Connection error: $e');
     }
+    print('⚠️ Flask server not available after 3 attempts');
+    if (mounted) {
+      setState(() => _flaskConnected = false);
+    }
+  }
+
+  Future<void> _retryConnection() async {
+    setState(() {
+      _error = null;
+      _flaskConnected = false;
+    });
+    await _initializeConnection();
   }
 
   Future<void> _analyzeTextEmotion() async {
@@ -226,7 +273,8 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
 
   void _toggleStreaming() {
     if (!_flaskConnected) {
-      setState(() => _error = 'Camera AI service is not available. Start the Flask server first.');
+      setState(() => _error = 'Camera AI service is not available. Trying to reconnect...');
+      _retryConnection();
       return;
     }
 
@@ -316,49 +364,310 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
 
   void _showDominantEmotionResult(String emotion) {
     final visual = _getVisual(emotion);
+    final healthMessage = _getHealthMessage(emotion);
+    
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Icon(visual.icon, color: visual.color, size: 32),
-            const SizedBox(width: 12),
-            const Text('Detection Complete'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Your dominant emotion is:',
-              style: TextStyle(color: Colors.grey.shade600),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              visual.label,
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: visual.color,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _getDefaultAdvice(emotion),
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('OK', style: TextStyle(color: visual.color)),
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+            maxWidth: 400,
           ),
-        ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header with emotion
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: visual.gradient),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(visual.icon, color: Colors.white, size: 40),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Emotion Detected',
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      visual.label,
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${(_confidence * 100).toStringAsFixed(0)}% confidence',
+                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Scrollable content
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Health Insight section
+                      Row(
+                        children: [
+                          Icon(Icons.health_and_safety_rounded, color: visual.color, size: 22),
+                          const SizedBox(width: 8),
+                          Text(
+                            'AI Wellness Advice',
+                            style: TextStyle(
+                              color: visual.color,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: visual.color.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: visual.color.withOpacity(0.15)),
+                        ),
+                        child: Text(
+                          healthMessage,
+                          style: TextStyle(
+                            color: Colors.grey.shade800,
+                            fontSize: 14,
+                            height: 1.6,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      // Quick tip
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.amber.shade200),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.lightbulb_rounded, color: Colors.amber.shade700, size: 22),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _getQuickTip(emotion),
+                                style: TextStyle(color: Colors.amber.shade900, fontSize: 13, height: 1.4),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Action button
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: visual.color,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Got it!',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
+  }
+
+  String _getHealthMessage(String emotion) {
+    switch (emotion.toLowerCase()) {
+      case 'happy':
+        return '''🌟 Physical Benefits:
+• Boosts immune system by increasing antibody production
+• Lowers cortisol (stress hormone) levels by up to 23%
+• Reduces heart rate and blood pressure
+• Releases endorphins - natural mood elevators and painkillers
+• Improves sleep quality and duration
+
+💪 Wellness Recommendations:
+• Practice gratitude journaling to maintain this positive state
+• Share your happiness with loved ones - social connection amplifies joy
+• Engage in activities that brought you here
+• Take a photo or write about this moment to revisit later
+• Use this energy for creative or challenging tasks''';
+      case 'sad':
+        return '''💙 Understanding Sadness:
+• Sadness is a natural response that allows emotional processing
+• It signals a need for self-compassion and reflection
+• Prolonged sadness can affect sleep, appetite, and immune function
+• Your brain is processing loss, disappointment, or unmet needs
+
+🌱 Wellness Recommendations:
+• Allow yourself to feel - suppressing emotions prolongs them
+• Gentle movement: a 15-minute walk can boost serotonin by 25%
+• Reach out to one trusted person - social support is healing
+• Practice self-compassion: speak to yourself as you would a friend
+• Ensure adequate sleep (7-9 hours) - fatigue worsens mood
+• Consider warm beverages, comforting music, or nature exposure''';
+      case 'angry':
+        return '''🔥 Physical Impact:
+• Activates fight-or-flight response instantly
+• Heart rate can increase by 30+ beats per minute
+• Blood pressure spikes; blood vessels constrict
+• Stress hormones flood your system for hours afterward
+• Chronic anger increases risk of heart disease by 19%
+
+🧘 Wellness Recommendations:
+• STOP: Step back, Take a breath, Observe, Proceed mindfully
+• 4-7-8 breathing: Inhale 4 sec, hold 7 sec, exhale 8 sec
+• Physical release: brisk walk, push-ups, or squeeze a stress ball
+• Identify the underlying need (respect, fairness, boundaries)
+• Write down your thoughts before responding
+• Splash cold water on face to activate calming dive reflex''';
+      case 'fear':
+      case 'fearful':
+        return '''⚡ Body Response:
+• Amygdala triggers immediate stress response
+• Cortisol and adrenaline surge through your system
+• Heart rate increases; breathing becomes shallow
+• Blood flows away from digestive system to muscles
+• Chronic fear weakens immune function and disrupts sleep
+
+🛡️ Wellness Recommendations:
+• Grounding technique (5-4-3-2-1): Name 5 things you see, 4 you hear, 3 you touch, 2 you smell, 1 you taste
+• Box breathing: 4 counts in, 4 hold, 4 out, 4 hold
+• Place hand on heart - physical touch releases oxytocin
+• Reality check: "Is this fear based on facts or assumptions?"
+• Progressive muscle relaxation from toes to head
+• Remember: Fear is a signal, not a command to act''';
+      case 'anxious':
+        return '''😰 Physical Effects:
+• Body stays in constant "alert mode"
+• Muscle tension, especially in neck, shoulders, and jaw
+• Digestive issues (IBS symptoms increase with anxiety)
+• Shallow breathing reduces oxygen to brain
+• Sleep disruption creates a negative feedback loop
+• Weakened immune response over time
+
+🌿 Wellness Recommendations:
+• Diaphragmatic breathing: breathe into belly, not chest
+• Reduce caffeine - it mimics anxiety symptoms
+• "Worry window": schedule 15 min daily to address concerns
+• Body scan meditation to release held tension
+• Regular exercise reduces anxiety by 20% on average
+• Limit news/social media if it triggers anxiety
+• Maintain consistent sleep schedule (same time daily)''';
+      case 'surprise':
+      case 'surprised':
+        return '''✨ What\'s Happening:
+• Brain temporarily pauses to assess the unexpected
+• Heightened attention and awareness activated
+• Brief release of norepinephrine sharpens focus
+• Generally neutral impact on long-term health
+• Can transition to positive (delight) or negative (shock) states
+
+🎯 Wellness Recommendations:
+• Take a moment to process before reacting
+• Use heightened awareness for mindfulness practice
+• Notice how your body responds to the unexpected
+• If positive surprise: savor the moment consciously
+• If negative surprise: grounding techniques help stabilize
+• Journal about what surprised you and why''';
+      case 'neutral':
+        return '''☯️ The Balanced State:
+• Your nervous system is in optimal rest-and-digest mode
+• Body performs maintenance and repair functions
+• Cortisol levels are at healthy baseline
+• Ideal state for clear thinking and decision-making
+• Supports healthy digestion and immune function
+
+🌸 Wellness Recommendations:
+• This is an excellent time for:
+  - Important decisions requiring clarity
+  - Learning new skills or information
+  - Creative work and problem-solving
+  - Meditation and mindfulness practice
+• Practice gratitude to potentially shift toward happiness
+• Check in: are basic needs met? (sleep, nutrition, movement)
+• Use this stable foundation for personal growth activities''';
+      default:
+        return '''🔍 Emotional Awareness:
+• Recognizing your emotions is the first step to wellness
+• All emotions carry valuable information about your needs
+• Emotional awareness improves decision-making by 36%
+• Regular check-ins build emotional intelligence over time
+
+📝 Wellness Recommendations:
+• Name your emotion specifically (frustrated vs. angry vs. irritated)
+• Ask: "What is this emotion trying to tell me?"
+• Journal about your feelings without judgment
+• Practice the RAIN technique: Recognize, Allow, Investigate, Nurture
+• Consider speaking with a mental health professional for deeper exploration''';
+    }
+  }
+
+  String _getQuickTip(String emotion) {
+    switch (emotion.toLowerCase()) {
+      case 'happy':
+        return '💡 Quick Action: Write down 3 things you\'re grateful for right now to extend this positive feeling!';
+      case 'sad':
+        return '💡 Quick Action: Step outside for 5 minutes - natural light boosts serotonin production naturally.';
+      case 'angry':
+        return '💡 Quick Action: Try the 4-7-8 breath now: Inhale 4 sec → Hold 7 sec → Exhale 8 sec. Repeat 3x.';
+      case 'fear':
+      case 'fearful':
+        return '💡 Quick Action: Ground yourself - feel your feet on the floor and name 5 blue things you can see.';
+      case 'anxious':
+        return '💡 Quick Action: Place one hand on chest, one on belly. Breathe so only the belly hand moves.';
+      case 'surprise':
+      case 'surprised':
+        return '💡 Quick Action: Take 3 slow breaths to process this moment before deciding how to respond.';
+      default:
+        return '💡 Quick Action: Close your eyes, take 3 deep breaths, and ask yourself: "What do I need right now?"';
+    }
   }
 
   void _startEmotionPolling() {
@@ -374,16 +683,21 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
 
   Future<void> _fetchCurrentEmotion() async {
     try {
-      final response = await http.get(Uri.parse('$_flaskUrl/emotion'));
+      final response = await http.get(Uri.parse('$_flaskUrl/emotion')).timeout(
+        const Duration(seconds: 3),
+      );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final emotion = (data['emotion'] ?? 'Neutral').toString().toLowerCase();
         final confidence = (data['confidence'] ?? 0.5).toDouble();
         
-        setState(() {
-          _currentEmotion = emotion;
-          _confidence = confidence;
-        });
+        if (mounted) {
+          setState(() {
+            _currentEmotion = emotion;
+            _confidence = confidence;
+            _flaskConnected = true; // Confirm connection is still good
+          });
+        }
 
         // Track emotion for auto-detect
         if (_isAutoDetecting) {
@@ -392,6 +706,15 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
       }
     } catch (e) {
       print('Failed to fetch emotion: $e');
+      // If connection fails repeatedly, mark as disconnected
+      if (mounted && _isStreaming) {
+        setState(() {
+          _flaskConnected = false;
+          _error = 'Lost connection to camera AI. Trying to reconnect...';
+        });
+        // Try to reconnect
+        await _connectToFlask();
+      }
     }
   }
 
@@ -401,6 +724,7 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     final visual = _getVisual(_currentEmotion);
     
     return Scaffold(
@@ -549,39 +873,7 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
             ],
           ),
           const SizedBox(height: 20),
-          // Camera toggle button
-          Material(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(16),
-            child: InkWell(
-              onTap: _toggleStreaming,
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                width: double.infinity,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      _isStreaming ? Icons.videocam_off_rounded : Icons.videocam_rounded,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      _isStreaming ? 'Stop Camera' : 'Start Camera Detection',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          // Auto detect button (10 seconds)
+          // Auto detect button (10 seconds) - Main feature
           Material(
             color: _isAutoDetecting ? Colors.white.withOpacity(0.4) : Colors.white.withOpacity(0.2),
             borderRadius: BorderRadius.circular(16),
@@ -677,32 +969,6 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
   }
 
   Widget _buildCameraFeed() {
-    // For web, use HtmlElementView with img tag that supports MJPEG
-    if (kIsWeb) {
-      return Container(
-        height: 280,
-        margin: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: _MjpegStreamWidget(
-            streamUrl: '$_flaskUrl/video',
-          ),
-        ),
-      );
-    }
-    
-    // For mobile/desktop, use Image.network
     return Container(
       height: 280,
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -719,43 +985,17 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
-        child: Image.network(
-          '$_flaskUrl/video',
-          fit: BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: Colors.white),
-                  SizedBox(height: 12),
-                  Text('Connecting to camera...', style: TextStyle(color: Colors.white70)),
-                ],
+        child: kIsWeb
+            ? WebCameraView(
+                streamUrl: '$_flaskUrl/video',
+                isStreaming: _isStreaming,
+              )
+            : MobileCameraView(
+                streamUrl: '$_flaskUrl/video',
+                isStreaming: _isStreaming,
+                currentEmotion: _currentEmotion,
+                confidence: _confidence,
               ),
-            );
-          },
-          errorBuilder: (context, error, stackTrace) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.videocam_off, size: 48, color: Colors.grey.shade600),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Camera feed unavailable',
-                    style: TextStyle(color: Colors.grey.shade400),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Ensure Flask server is running',
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
       ),
     );
   }
@@ -944,89 +1184,6 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
             }).toList(),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// MJPEG Stream Widget for Web platform
-/// Displays information about viewing the stream externally
-class _MjpegStreamWidget extends StatelessWidget {
-  final String streamUrl;
-  
-  const _MjpegStreamWidget({required this.streamUrl});
-  
-  @override
-  Widget build(BuildContext context) {
-    // For Flutter web, MJPEG streams don't work with Image.network
-    // Show a helpful message with a link to view externally
-    return Container(
-      color: Colors.black,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(50),
-              ),
-              child: const Icon(Icons.videocam_rounded, size: 40, color: Colors.white70),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Camera Feed Active',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Emotion detection is running',
-              style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 14),
-            ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF10B981),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Live',
-                    style: TextStyle(
-                      color: Color(0xFF10B981),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'View stream at: $streamUrl',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.4),
-                fontSize: 11,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

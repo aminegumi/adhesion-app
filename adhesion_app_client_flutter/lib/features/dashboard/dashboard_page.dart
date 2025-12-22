@@ -558,7 +558,7 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => TestsPage(baseUrl: widget.baseUrl)),
-                  ),
+                  ).then((_) { if (mounted) { final f = _load(); setState(() => _future = f); } }),
                 ),
               ),
             ],
@@ -962,7 +962,7 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
                     _drawerSection('Health Tools'),
                     _drawerItem(Icons.science_rounded, 'Psychological Tests', () {
                       Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => TestsPage(baseUrl: widget.baseUrl)));
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => TestsPage(baseUrl: widget.baseUrl))).then((_) { if (mounted) { final f = _load(); setState(() => _future = f); } });
                     }),
                     _drawerItem(Icons.face_rounded, 'Emotion Detection', () {
                       Navigator.pop(context);
@@ -970,7 +970,7 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
                     }),
                     _drawerItem(Icons.insights_rounded, 'AI Predictions', () {
                       Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => PredictionsPage(baseUrl: widget.baseUrl)));
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => PredictionsPage(baseUrl: widget.baseUrl))).then((_) { if (mounted) { final f = _load(); setState(() => _future = f); } });
                     }),
                     const SizedBox(height: 16),
                     _drawerSection('AI Assistants'),
@@ -1101,7 +1101,7 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
             case 0:
               break;
             case 1:
-              Navigator.push(context, MaterialPageRoute(builder: (_) => TestsPage(baseUrl: widget.baseUrl)));
+              Navigator.push(context, MaterialPageRoute(builder: (_) => TestsPage(baseUrl: widget.baseUrl))).then((_) { if (mounted) { final f = _load(); setState(() => _future = f); } });
               break;
             case 2:
               Navigator.push(context, MaterialPageRoute(builder: (_) => MotivationPage(baseUrl: widget.baseUrl)));

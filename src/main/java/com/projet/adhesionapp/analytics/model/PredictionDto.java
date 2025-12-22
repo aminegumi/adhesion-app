@@ -1,5 +1,6 @@
 package com.projet.adhesionapp.analytics.model;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 
@@ -9,6 +10,7 @@ public record PredictionDto(
         LocalDate date,
         double probNonAdherence,
         String modelVersion,
-        String topFeaturesJson
+        String topFeaturesJson,
+        Instant createdAt
 ) {
 }

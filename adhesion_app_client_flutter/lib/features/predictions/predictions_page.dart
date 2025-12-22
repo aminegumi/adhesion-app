@@ -44,8 +44,15 @@ class _PredictionsPageState extends State<PredictionsPage> {
       }
 
       final predictions = await _api.getPredictionsHistory(userId);
-      // Sort by date descending
-      predictions.sort((a, b) => b.date.compareTo(a.date));
+      // Sort by createdAt timestamp descending (latest first)
+      predictions.sort((a, b) {
+        // If both have createdAt, compare by full timestamp
+        if (a.createdAt != null && b.createdAt != null) {
+          return b.createdAt!.compareTo(a.createdAt!);
+        }
+        // Fallback to date string comparison
+        return b.date.compareTo(a.date);
+      });
       setState(() => _predictions = predictions);
     } catch (e) {
       setState(() => _error = e.toString());

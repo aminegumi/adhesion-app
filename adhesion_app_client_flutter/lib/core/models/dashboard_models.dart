@@ -22,12 +22,14 @@ class PredictionItem {
   final String date; // YYYY-MM-DD
   final double probNonAdherence;
   final String modelVersion;
+  final DateTime? createdAt; // Full timestamp for sorting
 
   PredictionItem({
     required this.id,
     required this.date,
     required this.probNonAdherence,
     required this.modelVersion,
+    this.createdAt,
   });
 
   factory PredictionItem.fromJson(Map<String, dynamic> json) => PredictionItem(
@@ -35,6 +37,9 @@ class PredictionItem {
     date: json['date'] as String,
     probNonAdherence: (json['probNonAdherence'] as num).toDouble(),
     modelVersion: (json['modelVersion'] ?? '') as String,
+    createdAt: json['createdAt'] != null 
+        ? DateTime.tryParse(json['createdAt'] as String) 
+        : null,
   );
 }
 

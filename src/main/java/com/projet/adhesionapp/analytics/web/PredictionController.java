@@ -38,7 +38,8 @@ public class PredictionController {
                 saved.getDate(),
                 saved.getProbNonAdherence(),
                 saved.getModelVersion(),
-                saved.getTopFeaturesJson());
+                saved.getTopFeaturesJson(),
+                saved.getCreatedAt());
     }
 
     @GetMapping("/user/{userId}")
@@ -51,7 +52,8 @@ public class PredictionController {
                         p.getDate(),
                         p.getProbNonAdherence(),
                         p.getModelVersion(),
-                        p.getTopFeaturesJson()))
+                        p.getTopFeaturesJson(),
+                        p.getCreatedAt()))
                 .toList();
     }
 
