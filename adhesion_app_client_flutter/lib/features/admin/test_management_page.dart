@@ -244,22 +244,7 @@ class _TestManagementPageState extends State<TestManagementPage> {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              Container(
-                margin: const EdgeInsets.only(top: 6),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  '${test.questions?.length ?? 0} questions',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.6),
-                    fontSize: 11,
-                  ),
-                ),
-              ),
+
             ],
           ),
           trailing: Row(
@@ -391,6 +376,7 @@ class _TestFormDialogState extends State<_TestFormDialog> {
   final _titleCtrl = TextEditingController();
   final _codeCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
+  final _versionCtrl = TextEditingController();
   final List<_QuestionData> _questions = [];
   bool _saving = false;
 
@@ -401,6 +387,7 @@ class _TestFormDialogState extends State<_TestFormDialog> {
       _titleCtrl.text = widget.test!.title ?? '';
       _codeCtrl.text = widget.test!.code ?? '';
       _descCtrl.text = widget.test!.description ?? '';
+      _versionCtrl.text = widget.test!.version ?? '1.0';
       
       if (widget.test!.questions != null) {
         for (final q in widget.test!.questions!) {
@@ -411,6 +398,9 @@ class _TestFormDialogState extends State<_TestFormDialog> {
           ));
         }
       }
+    } else {
+      // Default version for new tests
+      _versionCtrl.text = '1.0';
     }
   }
 
@@ -419,6 +409,7 @@ class _TestFormDialogState extends State<_TestFormDialog> {
     _titleCtrl.dispose();
     _codeCtrl.dispose();
     _descCtrl.dispose();
+    _versionCtrl.dispose();
     super.dispose();
   }
 
@@ -453,6 +444,7 @@ class _TestFormDialogState extends State<_TestFormDialog> {
         'title': _titleCtrl.text.trim(),
         'code': _codeCtrl.text.trim().toUpperCase(),
         'description': _descCtrl.text.trim(),
+        'version': _versionCtrl.text.trim(),
         'active': true,
         'questions': _questions.asMap().entries.map((e) => {
           'text': e.value.text,
@@ -565,6 +557,15 @@ class _TestFormDialogState extends State<_TestFormDialog> {
                         controller: _codeCtrl,
                         label: 'Test Code',
                         hint: 'e.g., GAD-7',
+                        validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Version
+                      _buildFormField(
+                        controller: _versionCtrl,
+                        label: 'Version',
+                        hint: 'e.g., 1.0',
                         validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
                       ),
                       const SizedBox(height: 16),

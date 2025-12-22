@@ -8,11 +8,13 @@ import '../../core/theme/app_theme.dart';
 class UserDataPage extends StatefulWidget {
   final String baseUrl;
   final User? specificUser;
+  final bool showAllUsers; // New: show all users including non-consented
   
   const UserDataPage({
     super.key,
     required this.baseUrl,
     this.specificUser,
+    this.showAllUsers = false,
   });
 
   @override
@@ -38,6 +40,7 @@ class _UserDataPageState extends State<UserDataPage> with SingleTickerProviderSt
     
     if (widget.specificUser != null) {
       _selectedUser = widget.specificUser;
+      _loading = false; // No need to load user list when specific user is passed
       _loadUserDetails(widget.specificUser!);
     } else {
       _loadUsers();
@@ -54,7 +57,14 @@ class _UserDataPageState extends State<UserDataPage> with SingleTickerProviderSt
   Future<void> _loadUsers() async {
     setState(() => _loading = true);
     try {
-      _users = await _api.getConsentedUsers();
+      // Load all users or only consented based on showAllUsers flag
+      if (widget.showAllUsers) {
+        _users = await _api.getAllUsers();
+        // Filter out admin users
+        _users = _users.where((u) => u.role != 'ADMIN').toList();
+      } else {
+        _users = await _api.getConsentedUsers();
+      }
     } catch (e) {
       // Handle error
     } finally {
@@ -69,7 +79,7 @@ class _UserDataPageState extends State<UserDataPage> with SingleTickerProviderSt
     });
     
     try {
-      final results = await Future.wait([
+      final results = await Future.wait<dynamic>([
         _api.getUserTestResults(user.id!).catchError((_) => <TestResultDto>[]),
         _api.getUserTreatmentPlansAdmin(user.id!).catchError((_) => <TreatmentPlan>[]),
       ]);
@@ -92,7 +102,9 @@ class _UserDataPageState extends State<UserDataPage> with SingleTickerProviderSt
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
-        title: Text(_selectedUser != null ? 'User Details' : 'Consented Users'),
+        title: Text(_selectedUser != null 
+            ? 'User Details' 
+            : widget.showAllUsers ? 'All Users' : 'Consented Users'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -136,7 +148,7 @@ class _UserDataPageState extends State<UserDataPage> with SingleTickerProviderSt
             ),
             const SizedBox(height: 24),
             Text(
-              'No Consented Users',
+              widget.showAllUsers ? 'No Users Found' : 'No Consented Users',
               style: TextStyle(
                 color: Colors.white.withOpacity(0.8),
                 fontSize: 20,
@@ -145,7 +157,9 @@ class _UserDataPageState extends State<UserDataPage> with SingleTickerProviderSt
             ),
             const SizedBox(height: 8),
             Text(
-              'Users who give consent will appear here',
+              widget.showAllUsers 
+                  ? 'No users have registered yet'
+                  : 'Users who give consent will appear here',
               style: TextStyle(
                 color: Colors.white.withOpacity(0.5),
                 fontSize: 14,
@@ -156,42 +170,109 @@ class _UserDataPageState extends State<UserDataPage> with SingleTickerProviderSt
       );
     }
 
-    return ListView.builder(
+    // Separate consented and non-consented users
+    final consentedUsers = _users.where((u) => u.consentGiven ?? false).toList();
+    final nonConsentedUsers = _users.where((u) => !(u.consentGiven ?? false)).toList();
+
+    return ListView(
       padding: const EdgeInsets.all(16),
-      itemCount: _users.length,
-      itemBuilder: (context, index) {
-        final user = _users[index];
-        return _buildUserCard(user);
-      },
+      children: [
+        // Show consented users first
+        if (consentedUsers.isNotEmpty) ...[
+          _buildSectionHeader('Consented Users', consentedUsers.length, AppColors.success),
+          const SizedBox(height: 12),
+          ...consentedUsers.map((user) => _buildUserCard(user)),
+        ],
+        // Then show non-consented users
+        if (nonConsentedUsers.isNotEmpty && widget.showAllUsers) ...[
+          const SizedBox(height: 20),
+          _buildSectionHeader('No Consent', nonConsentedUsers.length, Colors.red),
+          const SizedBox(height: 12),
+          ...nonConsentedUsers.map((user) => _buildUserCard(user)),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader(String title, int count, Color color) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                title.contains('Consent') && !title.contains('No') 
+                    ? Icons.check_circle 
+                    : Icons.block,
+                color: color,
+                size: 16,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '$title ($count)',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildUserCard(User user) {
+    final hasConsent = user.consentGiven ?? false;
+    
     return GestureDetector(
-      onTap: () => _loadUserDetails(user),
+      onTap: hasConsent 
+          ? () => _loadUserDetails(user)
+          : () => _showNoConsentDialog(user),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
+          color: hasConsent 
+              ? Colors.white.withOpacity(0.05)
+              : Colors.white.withOpacity(0.02),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(
+            color: hasConsent 
+                ? Colors.white.withOpacity(0.08)
+                : Colors.red.withOpacity(0.2),
+          ),
         ),
         child: Row(
           children: [
             CircleAvatar(
               radius: 26,
-              backgroundColor: const Color(0xFF6366F1).withOpacity(0.2),
-              child: Text(
-                (user.displayName?.isNotEmpty ?? false)
-                    ? user.displayName![0].toUpperCase()
-                    : 'U',
-                style: const TextStyle(
-                  color: Color(0xFF6366F1),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
+              backgroundColor: hasConsent 
+                  ? const Color(0xFF6366F1).withOpacity(0.2)
+                  : Colors.grey.withOpacity(0.2),
+              child: hasConsent
+                  ? Text(
+                      (user.displayName?.isNotEmpty ?? false)
+                          ? user.displayName![0].toUpperCase()
+                          : 'U',
+                      style: const TextStyle(
+                        color: Color(0xFF6366F1),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    )
+                  : Icon(
+                      Icons.lock_outline,
+                      color: Colors.grey.withOpacity(0.5),
+                      size: 24,
+                    ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -199,39 +280,97 @@ class _UserDataPageState extends State<UserDataPage> with SingleTickerProviderSt
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    user.displayName ?? 'Unknown',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    hasConsent ? (user.displayName ?? 'Unknown') : 'User #${user.id}',
+                    style: TextStyle(
+                      color: hasConsent ? Colors.white : Colors.white.withOpacity(0.5),
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    user.email ?? '',
+                    hasConsent ? (user.email ?? '') : '••••••@••••••',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.5),
+                      color: Colors.white.withOpacity(hasConsent ? 0.5 : 0.3),
                       fontSize: 13,
                     ),
                   ),
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      _buildTag(user.gender ?? 'N/A', const Color(0xFF6366F1)),
-                      const SizedBox(width: 8),
-                      _buildTag('Consented', AppColors.success),
+                      if (hasConsent) ...[
+                        _buildTag(user.gender ?? 'N/A', const Color(0xFF6366F1)),
+                        const SizedBox(width: 8),
+                        _buildTag('Consented', AppColors.success),
+                      ] else
+                        _buildTag('No Consent', Colors.red),
                     ],
                   ),
                 ],
               ),
             ),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.white.withOpacity(0.3),
-              size: 16,
+            if (hasConsent)
+              Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.white.withOpacity(0.3),
+                size: 16,
+              )
+            else
+              Icon(
+                Icons.block,
+                color: Colors.red.withOpacity(0.5),
+                size: 20,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showNoConsentDialog(User user) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.lock, color: Colors.red, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Access Restricted',
+              style: TextStyle(color: Colors.white, fontSize: 18),
             ),
           ],
         ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This user has not given consent to share their data.',
+              style: TextStyle(color: Colors.white.withOpacity(0.8)),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'You cannot view their psychological profile, test results, or treatment plans until they consent to data sharing.',
+              style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Understood'),
+          ),
+        ],
       ),
     );
   }

@@ -62,7 +62,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
     });
 
     try {
-      final results = await Future.wait([
+      final results = await Future.wait<dynamic>([
         _api.getConsentedUsers().catchError((_) => <User>[]),
         _api.getTests().catchError((_) => <TestDto>[]),
         _api.getAllUsers().catchError((_) => <User>[]),
@@ -649,8 +649,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
               Expanded(
                 child: _buildActionCard(
                   icon: Icons.people_outline,
-                  label: 'View Users',
-                  description: 'Consented data',
+                  label: 'Consented Users',
+                  description: 'View authorized data',
                   color: const Color(0xFF10B981),
                   onTap: () => Navigator.push(
                     context,
@@ -667,33 +667,56 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
             children: [
               Expanded(
                 child: _buildActionCard(
-                  icon: Icons.upload_file_rounded,
-                  label: 'Import Tests',
-                  description: 'From JSON file',
+                  icon: Icons.groups_rounded,
+                  label: 'All Users',
+                  description: 'View all with consent status',
                   color: const Color(0xFFF59E0B),
-                  onTap: _importTestsFromJson,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => UserDataPage(
+                        baseUrl: widget.baseUrl,
+                        showAllUsers: true,
+                      ),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildActionCard(
-                  icon: Icons.info_outline_rounded,
-                  label: 'JSON Format',
-                  description: 'View template',
+                  icon: Icons.upload_file_rounded,
+                  label: 'Import Tests',
+                  description: 'From JSON file',
                   color: const Color(0xFF8B5CF6),
-                  onTap: _showJsonFormatInfo,
+                  onTap: _importTestsFromJson,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          _buildActionCard(
-            icon: Icons.person_add_rounded,
-            label: 'Create New Admin',
-            description: 'Add administrator account',
-            color: const Color(0xFFDC2626),
-            onTap: _showCreateAdminDialog,
-            fullWidth: true,
+          Row(
+            children: [
+              Expanded(
+                child: _buildActionCard(
+                  icon: Icons.info_outline_rounded,
+                  label: 'JSON Format',
+                  description: 'View template',
+                  color: const Color(0xFFEC4899),
+                  onTap: _showJsonFormatInfo,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildActionCard(
+                  icon: Icons.person_add_rounded,
+                  label: 'Create Admin',
+                  description: 'Add administrator',
+                  color: const Color(0xFFDC2626),
+                  onTap: _showCreateAdminDialog,
+                ),
+              ),
+            ],
           ),
         ],
       ),

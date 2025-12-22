@@ -21,7 +21,7 @@ public interface TreatmentPlanRepository extends JpaRepository<TreatmentPlan, Lo
 
     List<TreatmentPlan> findByStatus(TreatmentPlan.PlanStatus status);
 
-    @EntityGraph(attributePaths = { "medicationList", "user" })
-    @Query("SELECT p FROM TreatmentPlan p WHERE p.id = :id")
+    @EntityGraph(attributePaths = { "medicationList", "dailyTasks", "user" })
+    @Query("SELECT DISTINCT p FROM TreatmentPlan p WHERE p.id = :id")
     Optional<TreatmentPlan> findByIdWithMedications(@Param("id") Long id);
 }

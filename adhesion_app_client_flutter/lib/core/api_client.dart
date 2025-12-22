@@ -77,6 +77,46 @@ class ApiClient {
     return UserStatus.fromJson(map);
   }
 
+  /// Get user profile by ID
+  Future<User> getUserProfile(int userId) async {
+    final uri = Uri.parse('$baseUrl/api/users/$userId');
+    final res = await _client.get(uri);
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    return User.fromJson(map);
+  }
+
+  /// Update user profile
+  Future<User> updateUserProfile(
+    int userId, {
+    String? displayName,
+    String? email,
+    String? gender,
+    String? birthDate,
+    bool? consentGiven,
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/users/$userId');
+    final body = <String, dynamic>{};
+    if (displayName != null) body['displayName'] = displayName;
+    if (email != null) body['email'] = email;
+    if (gender != null) body['gender'] = gender;
+    if (birthDate != null) body['birthDate'] = birthDate;
+    if (consentGiven != null) body['consentGiven'] = consentGiven;
+    
+    final res = await _client.put(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    return User.fromJson(map);
+  }
+
   static Future<String?> getStoredUserName() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('user_display_name');
@@ -90,12 +130,16 @@ class ApiClient {
   static Future<void> saveUserInfo(
     int userId,
     String displayName,
-    String email,
-  ) async {
+    String email, {
+    String? role,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('user_id', userId);
     await prefs.setString('user_display_name', displayName);
     await prefs.setString('user_email', email);
+    if (role != null) {
+      await prefs.setString('user_role', role);
+    }
   }
 
   Future<List<AdherenceSummary>> getAdherenceHistory({
@@ -139,16 +183,22 @@ class ApiClient {
     return list;
   }
 
-  /// Generate a new prediction for the user based on their profile and adherence data
+  /// Generate a new prediction for the user based on multiple factors:
+  /// profile scores, adherence history, test results, and treatment plan progress
   Future<PredictionItem> generatePrediction(int userId) async {
-    // First get the user's profile score
-    double profileScore = 50.0; // default
-    double recentAdherenceRate = 0.5; // default
+    // Initialize default values
+    double profileScore = 50.0;
+    double recentAdherenceRate = 0.5;
+    double testCompletionRate = 0.0;
+    double averageTestScore = 50.0;
+    double planProgressRate = 0.0;
+    int activePlansCount = 0;
+    int daysStreak = 0;
 
+    // Get profile score
     try {
       final profile = await getLatestProfile(userId);
       if (profile != null) {
-        // Calculate average score from profile using available fields
         profileScore =
             ((profile.motivationScore ?? 50) +
                 (profile.selfEfficacyScore ?? 50) +
@@ -160,6 +210,7 @@ class ApiClient {
       print('Could not get profile for prediction: $e');
     }
 
+    // Get adherence history
     try {
       final now = DateTime.now();
       final from =
@@ -176,9 +227,68 @@ class ApiClient {
             history.map((h) => h.adherenceScore).reduce((a, b) => a + b) /
             history.length /
             100;
+        
+        // Calculate streak from consecutive days with good adherence
+        int streak = 0;
+        for (final h in history.reversed) {
+          if (h.adherenceScore >= 70) {
+            streak++;
+          } else {
+            break;
+          }
+        }
+        daysStreak = streak;
       }
     } catch (e) {
       print('Could not get adherence history for prediction: $e');
+    }
+
+    // Get test history for test completion rate and average score
+    try {
+      final testHistory = await getTestHistory(userId);
+      if (testHistory.isNotEmpty) {
+        // Assuming user should complete at least 4 core tests (PHQ, GAD, BMQ, MMAS)
+        testCompletionRate = (testHistory.length / 4.0).clamp(0.0, 1.0);
+        
+        // Calculate average score from test results
+        double totalScore = 0;
+        int scoreCount = 0;
+        for (final result in testHistory) {
+          if (result.totalScore != null) {
+            // Normalize score to 0-100 (higher is better for adherence)
+            // Most tests: lower score = less severe symptoms = better
+            double normalizedScore = 100.0 - (result.totalScore! * 5).clamp(0, 100).toDouble();
+            totalScore += normalizedScore;
+            scoreCount++;
+          }
+        }
+        if (scoreCount > 0) {
+          averageTestScore = totalScore / scoreCount;
+        }
+      }
+    } catch (e) {
+      print('Could not get test history for prediction: $e');
+    }
+
+    // Get treatment plan progress
+    try {
+      final plans = await getUserTreatmentPlans(userId);
+      if (plans.isNotEmpty) {
+        final activePlans = plans.where((p) => p.status == 'ACTIVE').toList();
+        activePlansCount = activePlans.length;
+        
+        // Calculate average progress of active plans
+        if (activePlans.isNotEmpty) {
+          double totalProgress = 0;
+          for (final plan in activePlans) {
+            // Use the progressPercentage field from the plan
+            totalProgress += plan.progressPercentage / 100.0;
+          }
+          planProgressRate = totalProgress / activePlans.length;
+        }
+      }
+    } catch (e) {
+      print('Could not get treatment plans for prediction: $e');
     }
 
     final uri = Uri.parse('$baseUrl/api/predictions');
@@ -194,6 +304,11 @@ class ApiClient {
         'date': dateStr,
         'profileScore': profileScore,
         'recentAdherenceRate': recentAdherenceRate,
+        'testCompletionRate': testCompletionRate,
+        'averageTestScore': averageTestScore,
+        'planProgressRate': planProgressRate,
+        'activePlansCount': activePlansCount,
+        'daysStreak': daysStreak,
       }),
     );
     if (res.statusCode != 200) {
@@ -235,6 +350,126 @@ class ApiClient {
         .map((e) => TestDto.fromJson(e as Map<String, dynamic>))
         .toList();
     return list;
+  }
+
+  // ==================== ADMIN APIs ====================
+
+  /// Get all users (admin only)
+  Future<List<User>> getAllUsers() async {
+    final uri = Uri.parse('$baseUrl/api/admin/users');
+    final res = await _client.get(uri);
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    final list = (jsonDecode(res.body) as List)
+        .map((e) => User.fromJson(e as Map<String, dynamic>))
+        .toList();
+    return list;
+  }
+
+  /// Get users who have given data sharing consent
+  Future<List<User>> getConsentedUsers() async {
+    final uri = Uri.parse('$baseUrl/api/admin/users/consented');
+    final res = await _client.get(uri);
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    final list = (jsonDecode(res.body) as List)
+        .map((e) => User.fromJson(e as Map<String, dynamic>))
+        .toList();
+    return list;
+  }
+
+  /// Get test results for a specific user (admin endpoint)
+  Future<List<TestResultDto>> getUserTestResults(int userId) async {
+    final uri = Uri.parse('$baseUrl/api/admin/users/$userId/test-results');
+    final res = await _client.get(uri);
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    final list = (jsonDecode(res.body) as List)
+        .map((e) => TestResultDto.fromJson(e as Map<String, dynamic>))
+        .toList();
+    return list;
+  }
+
+  /// Get treatment plans for a specific user (admin endpoint)
+  Future<List<TreatmentPlan>> getUserTreatmentPlansAdmin(int userId) async {
+    final uri = Uri.parse('$baseUrl/api/admin/users/$userId/treatment-plans');
+    final res = await _client.get(uri);
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    final list = (jsonDecode(res.body) as List)
+        .map((e) => TreatmentPlan.fromJson(e as Map<String, dynamic>))
+        .toList();
+    return list;
+  }
+
+  /// Create a new admin user
+  Future<User> createAdmin({
+    required String email,
+    required String password,
+    required String displayName,
+    String? birthDate,
+    String? gender,
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/admin/create');
+    final res = await _client.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'password': password,
+        'displayName': displayName,
+        if (birthDate != null) 'birthDate': birthDate,
+        if (gender != null) 'gender': gender,
+      }),
+    );
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    return User.fromJson(map);
+  }
+
+  /// Create a new test
+  Future<TestDto> createTest(Map<String, dynamic> testData) async {
+    final uri = Uri.parse('$baseUrl/api/tests');
+    final res = await _client.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(testData),
+    );
+    if (res.statusCode != 200 && res.statusCode != 201) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    return TestDto.fromJson(map);
+  }
+
+  /// Update an existing test
+  Future<TestDto> updateTest(int testId, Map<String, dynamic> testData) async {
+    final uri = Uri.parse('$baseUrl/api/tests/$testId');
+    final res = await _client.put(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(testData),
+    );
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    return TestDto.fromJson(map);
+  }
+
+  /// Delete a test
+  Future<void> deleteTest(int testId) async {
+    final uri = Uri.parse('$baseUrl/api/tests/$testId');
+    final res = await _client.delete(uri);
+    if (res.statusCode != 200 && res.statusCode != 204) {
+      throw ApiException(res.statusCode, res.body);
+    }
   }
 
   Future<TestDto> getTestWithQuestions(int testId) async {
@@ -419,6 +654,28 @@ class ApiClient {
     }
     final map = jsonDecode(res.body) as Map<String, dynamic>;
     return TreatmentPlan.fromJson(map);
+  }
+
+  Future<TreatmentPlan> updateTreatmentPlan(int planId, CreatePlanRequest request) async {
+    final uri = Uri.parse('$baseUrl/api/treatment-plans/$planId');
+    final res = await _client.put(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(request.toJson()),
+    );
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, res.body);
+    }
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    return TreatmentPlan.fromJson(map);
+  }
+
+  Future<void> deleteTreatmentPlan(int planId) async {
+    final uri = Uri.parse('$baseUrl/api/treatment-plans/$planId');
+    final res = await _client.delete(uri);
+    if (res.statusCode != 200 && res.statusCode != 204) {
+      throw ApiException(res.statusCode, res.body);
+    }
   }
 
   Future<List<DailyTask>> getTodaysTasks(int userId) async {

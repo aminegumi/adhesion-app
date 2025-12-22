@@ -640,8 +640,102 @@ class _TreatmentPlanPageState extends State<TreatmentPlanPage>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _PlanDetailsSheet(plan: plan),
+      builder: (context) => _PlanDetailsSheet(
+        plan: plan,
+        onEdit: () {
+          Navigator.pop(context);
+          _editPlan(plan);
+        },
+        onDelete: () {
+          Navigator.pop(context);
+          _deletePlan(plan);
+        },
+      ),
     );
+  }
+
+  Future<void> _editPlan(TreatmentPlan plan) async {
+    final result = await showDialog<CreatePlanRequest>(
+      context: context,
+      builder: (ctx) => _CreatePlanDialog(existingPlan: plan),
+    );
+
+    if (result == null) return;
+
+    setState(() => _loading = true);
+    try {
+      await _api.updateTreatmentPlan(
+        plan.id,
+        CreatePlanRequest(
+          userId: plan.userId,
+          title: result.title ?? plan.title,
+          description: result.description ?? plan.description,
+          durationWeeks: result.durationWeeks ?? plan.durationWeeks ?? 4,
+          medications: result.medications,
+          medicationsList: result.medicationsList,
+        ),
+      );
+      await _loadData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Treatment plan updated successfully! ✏️'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _loading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _deletePlan(TreatmentPlan plan) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Plan'),
+        content: Text('Are you sure you want to delete "${plan.title}"?\n\nThis action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _loading = true);
+    try {
+      await _api.deleteTreatmentPlan(plan.id);
+      await _loadData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Treatment plan deleted 🗑️'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _loading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   IconData _getTaskIcon(String? category) {
@@ -675,17 +769,42 @@ class _TreatmentPlanPageState extends State<TreatmentPlanPage>
   }
 }
 
-// Dialog for creating a new plan
+// Dialog for creating or editing a plan
 class _CreatePlanDialog extends StatefulWidget {
+  final TreatmentPlan? existingPlan;
+  
+  const _CreatePlanDialog({this.existingPlan});
+  
   @override
   State<_CreatePlanDialog> createState() => _CreatePlanDialogState();
 }
 
 class _CreatePlanDialogState extends State<_CreatePlanDialog> {
-  final _titleController = TextEditingController(text: 'My Treatment Plan');
-  final _descController = TextEditingController();
-  int _weeks = 4;
-  final List<Medication> _medications = [];
+  late final TextEditingController _titleController;
+  late final TextEditingController _descController;
+  late int _weeks;
+  late final List<Medication> _medications;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize with existing plan data if editing
+    _titleController = TextEditingController(
+      text: widget.existingPlan?.title ?? 'My Treatment Plan',
+    );
+    _descController = TextEditingController(
+      text: widget.existingPlan?.description ?? '',
+    );
+    _weeks = widget.existingPlan?.durationWeeks ?? 4;
+    _medications = widget.existingPlan?.medicationsList.toList() ?? [];
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descController.dispose();
+    super.dispose();
+  }
 
   void _addMedication() async {
     final medication = await showDialog<Medication>(
@@ -713,6 +832,8 @@ class _CreatePlanDialogState extends State<_CreatePlanDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.existingPlan != null;
+    
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
@@ -732,12 +853,12 @@ class _CreatePlanDialogState extends State<_CreatePlanDialog> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.healing, color: Colors.white),
+                  Icon(isEditing ? Icons.edit : Icons.healing, color: Colors.white),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Create Treatment Plan',
-                      style: TextStyle(
+                      isEditing ? 'Edit Treatment Plan' : 'Create Treatment Plan',
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -1295,8 +1416,14 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
 // Plan details bottom sheet
 class _PlanDetailsSheet extends StatefulWidget {
   final TreatmentPlan plan;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
-  const _PlanDetailsSheet({required this.plan});
+  const _PlanDetailsSheet({
+    required this.plan,
+    this.onEdit,
+    this.onDelete,
+  });
 
   @override
   State<_PlanDetailsSheet> createState() => _PlanDetailsSheetState();
@@ -1366,28 +1493,55 @@ class _PlanDetailsSheetState extends State<_PlanDetailsSheet> {
                           ),
                         ],
                       ),
-                      // Sync medications button
-                      if (widget.plan.medicationsList.isNotEmpty)
-                        ElevatedButton.icon(
-                          onPressed: _isSyncing ? null : _syncMedications,
-                          icon: _isSyncing
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                  ),
-                                )
-                              : const Icon(Icons.sync, size: 16),
-                          label: Text(_isSyncing ? 'Syncing...' : 'Sync Meds'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white.withOpacity(0.2),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            textStyle: const TextStyle(fontSize: 12),
-                          ),
-                        ),
+                      // Action buttons row
+                      Row(
+                        children: [
+                          // Edit button
+                          if (widget.onEdit != null)
+                            IconButton(
+                              onPressed: widget.onEdit,
+                              icon: const Icon(Icons.edit, color: Colors.white, size: 20),
+                              tooltip: 'Edit Plan',
+                              style: IconButton.styleFrom(
+                                backgroundColor: Colors.white.withOpacity(0.2),
+                              ),
+                            ),
+                          const SizedBox(width: 8),
+                          // Delete button
+                          if (widget.onDelete != null)
+                            IconButton(
+                              onPressed: widget.onDelete,
+                              icon: const Icon(Icons.delete, color: Colors.white, size: 20),
+                              tooltip: 'Delete Plan',
+                              style: IconButton.styleFrom(
+                                backgroundColor: Colors.red.withOpacity(0.5),
+                              ),
+                            ),
+                          const SizedBox(width: 8),
+                          // Sync medications button
+                          if (widget.plan.medicationsList.isNotEmpty)
+                            ElevatedButton.icon(
+                              onPressed: _isSyncing ? null : _syncMedications,
+                              icon: _isSyncing
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                    )
+                                  : const Icon(Icons.sync, size: 16),
+                              label: Text(_isSyncing ? 'Syncing...' : 'Sync Meds'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white.withOpacity(0.2),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                textStyle: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                        ],
+                      ),
                     ],
                   ),
                 ],

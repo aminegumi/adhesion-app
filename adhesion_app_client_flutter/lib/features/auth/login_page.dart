@@ -101,6 +101,30 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         _passwordCtrl.text,
       );
 
+      // Check if user is an admin - admins should use admin login
+      if (resp.user.role == 'ADMIN') {
+        if (!mounted) return;
+        HapticFeedback.vibrate();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.admin_panel_settings, color: Colors.white),
+                SizedBox(width: 12),
+                Expanded(child: Text('Administrator accounts must use the Admin Login portal.')),
+              ],
+            ),
+            backgroundColor: AppColors.warning,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        setState(() => _loading = false);
+        return;
+      }
+
       await ApiClient.saveUserInfo(
         resp.user.id!,
         resp.user.displayName ?? 'User',

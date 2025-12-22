@@ -4,6 +4,7 @@ import '../../core/api_client.dart';
 import '../../core/models/dashboard_models.dart';
 import '../tests/tests_page.dart';
 import '../profile/profile_page.dart';
+import '../profile/edit_profile_page.dart';
 import '../recommendations/recommendations_page.dart';
 import '../motivation/motivation_page.dart';
 import '../motivation/get_motivation_page.dart';
@@ -209,8 +210,9 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
             final data = snap.data ?? _DashboardData.empty();
             return RefreshIndicator(
               onRefresh: () async {
-                setState(() => _future = _load());
-                await _future;
+                final future = _load();
+                setState(() => _future = future);
+                await future;
               },
               color: const Color(0xFF6366F1),
               child: CustomScrollView(
@@ -584,7 +586,7 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => TreatmentPlanPage(baseUrl: widget.baseUrl)),
-                  ),
+                  ).then((_) { if (mounted) { final f = _load(); setState(() => _future = f); } }),
                 ),
               ),
             ],
@@ -952,6 +954,10 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
                       Navigator.pop(context);
                       Navigator.push(context, MaterialPageRoute(builder: (_) => ProfilePage(baseUrl: widget.baseUrl)));
                     }),
+                    _drawerItem(Icons.edit_rounded, 'Edit Profile & Consent', () {
+                      Navigator.pop(context);
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => EditProfilePage(baseUrl: widget.baseUrl)));
+                    }),
                     const SizedBox(height: 16),
                     _drawerSection('Health Tools'),
                     _drawerItem(Icons.science_rounded, 'Psychological Tests', () {
@@ -984,7 +990,7 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
                     _drawerSection('Treatment'),
                     _drawerItem(Icons.assignment_rounded, 'Treatment Plans', () {
                       Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => TreatmentPlanPage(baseUrl: widget.baseUrl)));
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => TreatmentPlanPage(baseUrl: widget.baseUrl))).then((_) { if (mounted) { final f = _load(); setState(() => _future = f); } });
                     }),
                     _drawerItem(Icons.medication_rounded, 'My Medications', () {
                       Navigator.pop(context);

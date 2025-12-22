@@ -16,7 +16,6 @@ dependencies:
   image_picker: ^1.1.2
   path_provider: ^2.1.4
   file_picker: ^10.3.7
-  flutter_mjpeg: ^3.0.0
 
 dev_dependencies:
   flutter_test:

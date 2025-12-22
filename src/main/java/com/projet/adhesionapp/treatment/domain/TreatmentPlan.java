@@ -8,7 +8,9 @@ import lombok.*;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Treatment plan for a patient with goals, milestones, and daily tasks.
@@ -82,11 +84,11 @@ public class TreatmentPlan {
 
     @OneToMany(mappedBy = "treatmentPlan", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<DailyTask> dailyTasks = new ArrayList<>();
+    private Set<DailyTask> dailyTasks = new HashSet<>();
 
     @OneToMany(mappedBy = "treatmentPlan", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<Medication> medicationList = new ArrayList<>();
+    private Set<Medication> medicationList = new HashSet<>();
 
     private Instant createdAt;
     private Instant updatedAt;

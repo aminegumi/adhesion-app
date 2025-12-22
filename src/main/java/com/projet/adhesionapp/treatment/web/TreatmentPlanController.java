@@ -39,6 +39,20 @@ public class TreatmentPlanController {
         return ResponseEntity.ok(treatmentPlanService.toDto(plan));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<TreatmentPlanDto> updatePlan(
+            @PathVariable Long id,
+            @Valid @RequestBody CreatePlanRequest request) {
+        TreatmentPlan plan = treatmentPlanService.updatePlan(id, request);
+        return ResponseEntity.ok(treatmentPlanService.toDto(plan));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deletePlan(@PathVariable Long id) {
+        treatmentPlanService.deletePlan(id);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<TreatmentPlanDto>> getUserPlans(@PathVariable Long userId) {
         return ResponseEntity.ok(treatmentPlanService.getUserPlans(userId).stream()

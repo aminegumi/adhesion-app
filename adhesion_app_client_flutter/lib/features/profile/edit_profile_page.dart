@@ -140,7 +140,6 @@ class _EditProfilePageState extends State<EditProfilePage> with SingleTickerProv
         userId,
         updatedUser.displayName ?? '',
         updatedUser.email ?? '',
-        consent: _consentGiven,
       );
 
       if (!mounted) return;

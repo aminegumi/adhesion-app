@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../core/models/profile_models.dart';
+import 'edit_profile_page.dart';
 
 class ProfilePage extends StatefulWidget {
   final String baseUrl;
@@ -48,6 +49,19 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() => _error = e.toString());
     } finally {
       setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _navigateToEditProfile() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditProfilePage(baseUrl: widget.baseUrl),
+      ),
+    );
+    // Reload profile if changes were made
+    if (result == true) {
+      _loadProfile();
     }
   }
 

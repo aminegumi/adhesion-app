@@ -2,6 +2,7 @@ package com.projet.adhesionapp.treatment.service;
 
 import com.projet.adhesionapp.ai.service.OpenAIService;
 import com.projet.adhesionapp.common.exception.NotFoundException;
+import com.projet.adhesionapp.habit.repo.DoseLogRepository;
 import com.projet.adhesionapp.identity.domain.User;
 import com.projet.adhesionapp.identity.service.UserService;
 import com.projet.adhesionapp.profile.domain.PsychologicalProfile;
@@ -23,7 +24,9 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,6 +37,7 @@ public class TreatmentPlanService {
     private final TreatmentPlanRepository planRepository;
     private final DailyTaskRepository taskRepository;
     private final MedicationRepository medicationRepository;
+    private final DoseLogRepository doseLogRepository;
     private final UserService userService;
     private final PsychologicalProfileService profileService;
     private final OpenAIService openAIService;
@@ -89,7 +93,7 @@ public class TreatmentPlanService {
         if (request.medicationsList() != null && !request.medicationsList().isEmpty()) {
             List<Medication> meds = createMedicationsFromRequest(plan, request.medicationsList());
             medicationRepository.saveAll(meds);
-            plan.setMedicationList(meds);
+            plan.setMedicationList(new HashSet<>(meds));
         }
 
         // Generate daily tasks based on the plan
@@ -98,7 +102,7 @@ public class TreatmentPlanService {
             task.setTreatmentPlan(plan);
         }
         taskRepository.saveAll(tasks);
-        plan.setDailyTasks(tasks);
+        plan.setDailyTasks(new HashSet<>(tasks));
 
         return plan;
     }
@@ -123,6 +127,70 @@ public class TreatmentPlanService {
     public TreatmentPlan getById(Long id) {
         return planRepository.findByIdWithMedications(id)
                 .orElseThrow(() -> new NotFoundException("Treatment plan not found"));
+    }
+
+    /**
+     * Update an existing treatment plan.
+     */
+    @Transactional
+    public TreatmentPlan updatePlan(Long planId, CreatePlanRequest request) {
+        TreatmentPlan plan = getById(planId);
+        
+        if (request.title() != null) {
+            plan.setTitle(request.title());
+        }
+        if (request.description() != null) {
+            plan.setDescription(request.description());
+        }
+        if (request.durationWeeks() != null) {
+            plan.setDurationWeeks(request.durationWeeks());
+            if (plan.getStartDate() != null) {
+                plan.setEndDate(plan.getStartDate().plusWeeks(request.durationWeeks()));
+            }
+        }
+        if (request.medications() != null) {
+            plan.setMedications(request.medications());
+        }
+        if (request.identifiedIssues() != null) {
+            plan.setIdentifiedIssues(String.join(", ", request.identifiedIssues()));
+        }
+        
+        // Update medications list if provided - use orphanRemoval
+        if (request.medicationsList() != null) {
+            // First delete dose logs that reference the medications (foreign key constraint)
+            for (Medication med : plan.getMedicationList()) {
+                doseLogRepository.deleteByMedicationId(med.getId());
+            }
+            // Clear existing medications (orphanRemoval will delete them)
+            plan.getMedicationList().clear();
+            // Create new ones
+            if (!request.medicationsList().isEmpty()) {
+                List<Medication> meds = createMedicationsFromRequest(plan, request.medicationsList());
+                plan.getMedicationList().addAll(meds);
+            }
+        }
+        
+        return planRepository.save(plan);
+    }
+
+    /**
+     * Delete a treatment plan and all its associated data.
+     */
+    @Transactional
+    public void deletePlan(Long planId) {
+        TreatmentPlan plan = getById(planId);
+        
+        // First delete dose logs that reference the medications (foreign key constraint)
+        for (Medication med : plan.getMedicationList()) {
+            doseLogRepository.deleteByMedicationId(med.getId());
+        }
+        
+        // Clear the collections - orphanRemoval will delete the entities
+        plan.getDailyTasks().clear();
+        plan.getMedicationList().clear();
+        
+        // Delete the plan
+        planRepository.delete(plan);
     }
 
     /**

@@ -451,9 +451,69 @@ class _PredictionsPageState extends State<PredictionsPage> {
       padding: const EdgeInsets.all(16),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
-          (context, index) => _buildPredictionCard(_predictions[index], index),
+          (context, index) {
+            // Show info card at the top
+            if (index == 0) {
+              return Column(
+                children: [
+                  _buildInfoCard(),
+                  const SizedBox(height: 16),
+                  _buildPredictionCard(_predictions[0], 0),
+                ],
+              );
+            }
+            return _buildPredictionCard(_predictions[index], index);
+          },
           childCount: _predictions.length,
         ),
+      ),
+    );
+  }
+
+  Widget _buildInfoCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F9FF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF0EA5E9).withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0EA5E9).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.info_outline, color: Color(0xFF0EA5E9), size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'How Predictions Work',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1F2937),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Predictions are based on your psychological profile and medication adherence history. Take new tests or update your adherence to see changes.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

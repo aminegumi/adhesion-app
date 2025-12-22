@@ -2,6 +2,7 @@ package com.projet.adhesionapp.treatment.repo;
 
 import com.projet.adhesionapp.treatment.domain.Medication;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -40,4 +41,15 @@ public interface MedicationRepository extends JpaRepository<Medication, Long> {
     @Query("SELECT m FROM Medication m WHERE m.notificationsEnabled = true " +
             "AND m.scheduledTimes LIKE %:time%")
     List<Medication> findMedicationsWithScheduledTime(@Param("time") String time);
+
+    /**
+     * Delete all medications belonging to a treatment plan.
+     */
+    @Modifying
+    @Query("DELETE FROM Medication m WHERE m.treatmentPlan.id = :planId")
+    void deleteByTreatmentPlanId(@Param("planId") Long planId);
+
+    default void deleteByPlanId(Long planId) {
+        deleteByTreatmentPlanId(planId);
+    }
 }

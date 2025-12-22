@@ -3,6 +3,7 @@ package com.projet.adhesionapp.habit.repo;
 import com.projet.adhesionapp.habit.domain.DoseLog;
 import com.projet.adhesionapp.habit.domain.DoseLog.DoseStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -128,12 +129,16 @@ public interface DoseLogRepository extends JpaRepository<DoseLog, Long> {
     /**
      * Delete all doses for a medication (used when deleting medication)
      */
-    void deleteByMedication_Id(Long medicationId);
+    @Modifying
+    @Query("DELETE FROM DoseLog d WHERE d.medication.id = :medicationId")
+    void deleteByMedicationId(@Param("medicationId") Long medicationId);
 
     /**
      * Delete all doses for a UserMedication
      */
-    void deleteByUserMedicationId(Long userMedicationId);
+    @Modifying
+    @Query("DELETE FROM DoseLog d WHERE d.userMedication.id = :userMedicationId")
+    void deleteByUserMedicationId(@Param("userMedicationId") Long userMedicationId);
 
     /**
      * Find doses needing reminders (for UserMedication)

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -27,13 +28,24 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
   bool _isConnected = false;
   bool _flaskConnected = false;
   bool _isStreaming = false;
+  bool _isAutoDetecting = false;
+  int _autoDetectCountdown = 0;
   Timer? _emotionTimer;
+  Timer? _autoDetectTimer;
   String? _error;
   String? _aiAdvice;
   bool _loadingAdvice = false;
+  final Map<String, int> _emotionCounts = {}; // Track emotion frequencies for auto-detect
   
-  // For Android emulator use 10.0.2.2, for physical device use your PC's IP
-  final String _flaskUrl = 'http://10.0.2.2:5000';
+  // Dynamic Flask URL based on platform
+  String get _flaskUrl {
+    // For web, use localhost
+    if (kIsWeb) return 'http://localhost:5000';
+    // For Android emulator use 10.0.2.2
+    if (defaultTargetPlatform == TargetPlatform.android) return 'http://10.0.2.2:5000';
+    // For other platforms (Windows, iOS, macOS)
+    return 'http://localhost:5000';
+  }
   final TextEditingController _textController = TextEditingController();
   final List<Map<String, dynamic>> _emotionHistory = [];
 
@@ -106,6 +118,7 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
   void dispose() {
     _pulseController.dispose();
     _emotionTimer?.cancel();
+    _autoDetectTimer?.cancel();
     _textController.dispose();
     _aiService.close();
     super.dispose();
@@ -226,12 +239,131 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
       _startEmotionPolling();
     } else {
       _emotionTimer?.cancel();
+      _autoDetectTimer?.cancel();
+      _isAutoDetecting = false;
     }
+  }
+
+  void _startAutoDetect() {
+    if (!_flaskConnected) {
+      setState(() => _error = 'Camera AI service is not available. Start the Flask server first.');
+      return;
+    }
+
+    setState(() {
+      _isAutoDetecting = true;
+      _autoDetectCountdown = 10;
+      _emotionCounts.clear();
+      _error = null;
+      if (!_isStreaming) {
+        _isStreaming = true;
+      }
+    });
+
+    _startEmotionPolling();
+
+    // Countdown timer
+    _autoDetectTimer?.cancel();
+    _autoDetectTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      
+      setState(() {
+        _autoDetectCountdown--;
+      });
+
+      if (_autoDetectCountdown <= 0) {
+        timer.cancel();
+        _finishAutoDetect();
+      }
+    });
+  }
+
+  void _finishAutoDetect() {
+    _emotionTimer?.cancel();
+    _autoDetectTimer?.cancel();
+
+    // Find dominant emotion
+    String dominantEmotion = 'neutral';
+    int maxCount = 0;
+    _emotionCounts.forEach((emotion, count) {
+      if (count > maxCount) {
+        maxCount = count;
+        dominantEmotion = emotion;
+      }
+    });
+
+    setState(() {
+      _isAutoDetecting = false;
+      _isStreaming = false;
+      _currentEmotion = dominantEmotion;
+      _aiAdvice = _getDefaultAdvice(dominantEmotion);
+    });
+
+    // Add to history
+    _emotionHistory.insert(0, {
+      'emotion': dominantEmotion,
+      'timestamp': DateTime.now(),
+      'source': 'camera_auto',
+      'samples': maxCount,
+    });
+
+    // Show result dialog
+    _showDominantEmotionResult(dominantEmotion);
+  }
+
+  void _showDominantEmotionResult(String emotion) {
+    final visual = _getVisual(emotion);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(visual.icon, color: visual.color, size: 32),
+            const SizedBox(width: 12),
+            const Text('Detection Complete'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Your dominant emotion is:',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              visual.label,
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: visual.color,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _getDefaultAdvice(emotion),
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('OK', style: TextStyle(color: visual.color)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _startEmotionPolling() {
     _emotionTimer?.cancel();
-    _emotionTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
+    _emotionTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       if (!_isStreaming) {
         timer.cancel();
         return;
@@ -245,10 +377,18 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
       final response = await http.get(Uri.parse('$_flaskUrl/emotion'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        final emotion = (data['emotion'] ?? 'Neutral').toString().toLowerCase();
+        final confidence = (data['confidence'] ?? 0.5).toDouble();
+        
         setState(() {
-          _currentEmotion = (data['emotion'] ?? 'Neutral').toString().toLowerCase();
-          _confidence = (data['confidence'] ?? 0.5).toDouble();
+          _currentEmotion = emotion;
+          _confidence = confidence;
         });
+
+        // Track emotion for auto-detect
+        if (_isAutoDetecting) {
+          _emotionCounts[emotion] = (_emotionCounts[emotion] ?? 0) + 1;
+        }
       }
     } catch (e) {
       print('Failed to fetch emotion: $e');
@@ -440,6 +580,40 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          // Auto detect button (10 seconds)
+          Material(
+            color: _isAutoDetecting ? Colors.white.withOpacity(0.4) : Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              onTap: _isAutoDetecting ? null : _startAutoDetect,
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                width: double.infinity,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      _isAutoDetecting ? Icons.hourglass_top_rounded : Icons.timer_rounded,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      _isAutoDetecting 
+                          ? 'Detecting... $_autoDetectCountdown s'
+                          : 'Auto Detect (10s)',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
           if (_error != null) ...[
             const SizedBox(height: 12),
             Container(
@@ -503,6 +677,32 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
   }
 
   Widget _buildCameraFeed() {
+    // For web, use HtmlElementView with img tag that supports MJPEG
+    if (kIsWeb) {
+      return Container(
+        height: 280,
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: _MjpegStreamWidget(
+            streamUrl: '$_flaskUrl/video',
+          ),
+        ),
+      );
+    }
+    
+    // For mobile/desktop, use Image.network
     return Container(
       height: 280,
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -744,6 +944,89 @@ class _CombinedEmotionPageState extends State<CombinedEmotionPage>
             }).toList(),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// MJPEG Stream Widget for Web platform
+/// Displays information about viewing the stream externally
+class _MjpegStreamWidget extends StatelessWidget {
+  final String streamUrl;
+  
+  const _MjpegStreamWidget({required this.streamUrl});
+  
+  @override
+  Widget build(BuildContext context) {
+    // For Flutter web, MJPEG streams don't work with Image.network
+    // Show a helpful message with a link to view externally
+    return Container(
+      color: Colors.black,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(50),
+              ),
+              child: const Icon(Icons.videocam_rounded, size: 40, color: Colors.white70),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Camera Feed Active',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Emotion detection is running',
+              style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 14),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF10B981),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Live',
+                    style: TextStyle(
+                      color: Color(0xFF10B981),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'View stream at: $streamUrl',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.4),
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
