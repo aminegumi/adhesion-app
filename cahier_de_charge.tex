@@ -1,0 +1,880 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tocloft}
+
+\geometry{margin=2.5cm}
+
+% Couleurs
+\definecolor{emsiblue}{RGB}{0, 153, 51}
+\definecolor{lightgray}{RGB}{240, 240, 240}
+\definecolor{darkgray}{RGB}{100, 100, 100}
+
+% En-têtes et pieds de page
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Cahier des Charges - Adhésion-App}
+\fancyhead[R]{\small EMSI 2024-2025}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% Formatage des titres
+\titleformat{\chapter}[display]
+{\normalfont\huge\bfseries\color{emsiblue}}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
+
+\begin{document}
+
+%==============================================================================
+% PAGE DE GARDE
+%==============================================================================
+\begin{titlepage}
+    \centering
+    \vspace*{1cm}
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.5\linewidth]{EMSI.png}
+        \label{fig:placeholder}
+    \end{figure}
+    
+    {\Large \textbf{École Marocaine des Sciences de l'Ingénieur (EMSI)}}\\[0.5cm]
+    {\large Filière : Ingénierie Informatique}\\[0.8cm]
+    
+    \rule{\linewidth}{0.5mm}\\[0.4cm]
+    {\Huge \textbf{\color{emsiblue}CAHIER DES CHARGES}}\\[0.3cm]
+    \rule{\linewidth}{0.5mm}\\[0.8cm]
+    
+    {\LARGE \textbf{Application de Prédiction des Comportements\\d'Adhésion aux Thérapies}}\\[0.5cm]
+    {\Large \textbf{Basée sur Profils Psychométriques}}\\[0.3cm]
+    {\large \textit{Adhésion-App / Serenity}}\\[1cm]
+    
+    \begin{tabular}{ll}
+        \textbf{Projet :} & Projet Académique Transversal \\[0.2cm]
+        \textbf{Matières :} & Management de la Qualité, Dev. Multiplateforme, JEE2, PFA \\[0.2cm]
+        \textbf{Référence :} & CDC-AdhesionApp-v1.0 \\[0.2cm]
+        \textbf{Version :} & 1.0 \\[0.2cm]
+        \textbf{Date :} & 01 Novembre 2025 \\
+    \end{tabular}\\[2cm]
+    
+    \textbf{Équipe de Projet :}\\[0.3cm]
+    \begin{tabular}{|l|l|}
+        \hline
+        \rowcolor{emsiblue}\textcolor{white}{\textbf{Nom}} & \textcolor{white}{\textbf{Rôle}} \\
+        \hline
+        ISSAME Imad & Développeur / Testeur \\
+        \hline
+        AGOUMI Mohammed Amine & Développeur / Testeur \\
+        \hline
+        JABRANE Mohamed Yahya & Développeur / Testeur \\
+        \hline
+    \end{tabular}\\[2cm]
+    
+    \vfill
+    {\small Année Universitaire 2025-2026}
+\end{titlepage}
+
+%==============================================================================
+% TABLE DES MATIÈRES
+%==============================================================================
+\tableofcontents
+\newpage
+
+%==============================================================================
+% HISTORIQUE DES VERSIONS
+%==============================================================================
+\chapter*{Historique des Versions}
+\addcontentsline{toc}{chapter}{Historique des Versions}
+
+\begin{tabularx}{\textwidth}{|c|c|X|l|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{Version}} & \textcolor{white}{\textbf{Date}} & \textcolor{white}{\textbf{Description}} & \textcolor{white}{\textbf{Auteur}} \\
+    \hline
+    0.1 & 28/10/2025 & Version initiale - Définition du périmètre & Équipe \\
+    \hline
+    0.5 & 29/10/2025 & Ajout des spécifications fonctionnelles & Équipe \\
+    \hline
+    0.8 & 29/10/2025 & Spécifications techniques complètes & Équipe \\
+    \hline
+    1.0 & 01/11/2025 & Version finale validée & Équipe \\
+    \hline
+\end{tabularx}
+
+\newpage
+
+%==============================================================================
+% CHAPITRE 1 : INTRODUCTION
+%==============================================================================
+\chapter{Introduction}
+
+\section{Contexte du Projet}
+
+Dans le cadre de notre formation à l'École Marocaine des Sciences de l'Ingénieur (EMSI), nous réalisons un projet académique transversal impliquant plusieurs matières :
+\begin{itemize}
+    \item \textbf{Management de la Qualité} : Mise en place de processus qualité et métriques
+    \item \textbf{Développement Multiplateforme} : Application mobile Flutter
+    \item \textbf{JEE2} : Backend Spring Boot avec architecture REST et Application web Angular
+    \item \textbf{Projet de Fin d'Année (PFA)} : Intégration d'intelligence artificielle
+\end{itemize}
+
+L'adhésion thérapeutique représente un enjeu majeur de santé publique. Selon l'OMS, environ 50\% des patients atteints de maladies chroniques ne respectent pas leurs prescriptions médicales. Cette non-adhésion entraîne des complications de santé, une augmentation des coûts médicaux et une réduction de l'efficacité des traitements.
+
+\section{Objectifs du Projet}
+
+\subsection{Objectif Principal}
+Développer une application multiplateforme permettant de :
+\begin{itemize}
+    \item \textbf{Évaluer} les profils psychométriques des patients via des tests validés cliniquement
+    \item \textbf{Prédire} les comportements d'adhésion aux thérapies
+    \item \textbf{Accompagner} les patients avec des recommandations personnalisées
+    \item \textbf{Suivre} l'évolution de l'adhésion dans le temps
+\end{itemize}
+
+\subsection{Objectifs Spécifiques}
+\begin{enumerate}
+    \item Implémenter des tests psychométriques validés (MMAS-8, PHQ-9, GAD-7, BMQ)
+    \item Développer un modèle de prédiction multi-factoriel basé sur la recherche
+    \item Intégrer l'intelligence artificielle pour la personnalisation
+    \item Fournir une interface utilisateur intuitive et accessible
+    \item Assurer la qualité du code et la sécurité des données
+\end{enumerate}
+
+\section{Périmètre du Projet}
+
+\subsection{Inclus dans le Périmètre}
+\begin{itemize}
+    \item Application mobile (Flutter) pour les patients et l'administrateur
+    \item Application web Angular pour les patients
+    \item Dashboard administrateur Angular
+    \item API REST Spring Boot
+    \item Module d'intelligence artificielle
+    \item Base de données PostgreSQL
+\end{itemize}
+
+\subsection{Exclus du Périmètre}
+\begin{itemize}
+    \item Intégration avec des systèmes hospitaliers existants
+    \item Application iOS native
+    \item Téléconsultation en temps réel
+\end{itemize}
+
+\newpage
+
+%==============================================================================
+% CHAPITRE 2 : ANALYSE DES BESOINS
+%==============================================================================
+\chapter{Analyse des Besoins}
+
+\section{Acteurs du Système}
+
+\begin{tabularx}{\textwidth}{|l|X|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{Acteur}} & \textcolor{white}{\textbf{Description}} \\
+    \hline
+    \textbf{Patient} & Utilisateur principal qui passe les tests, consulte ses prédictions et suit son traitement \\
+    \hline
+    \textbf{Administrateur} & Gère les utilisateurs, consulte les analytics et supervise le système \\
+    \hline
+    \textbf{Système IA} & Génère des recommandations, analyses et messages motivationnels \\
+    \hline
+\end{tabularx}
+
+\section{Besoins Fonctionnels}
+
+\subsection{Module Authentification (AUTH)}
+
+\begin{longtable}{|p{2cm}|p{4cm}|p{7cm}|p{1.5cm}|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Fonctionnalité}} & \textcolor{white}{\textbf{Description}} & \textcolor{white}{\textbf{Priorité}} \\
+    \hline
+    \endfirsthead
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Fonctionnalité}} & \textcolor{white}{\textbf{Description}} & \textcolor{white}{\textbf{Priorité}} \\
+    \hline
+    \endhead
+    
+    AUTH-01 & Inscription & Le patient peut créer un compte avec email, mot de passe, nom, date de naissance et genre & Haute \\
+    \hline
+    AUTH-02 & Connexion & Authentification par email et mot de passe avec gestion de session & Haute \\
+    \hline
+    AUTH-03 & Déconnexion & Terminer la session utilisateur et nettoyer les données locales & Haute \\
+    \hline
+    AUTH-04 & Onboarding & Processus de tests initiaux obligatoires (minimum 2 tests) après inscription & Haute \\
+    \hline
+    AUTH-05 & Gestion Consentement & Recueil du consentement pour le partage de données & Moyenne \\
+    \hline
+\end{longtable}
+
+\subsection{Module Tests Psychométriques (TEST)}
+
+\begin{longtable}{|p{2cm}|p{4cm}|p{7cm}|p{1.5cm}|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Fonctionnalité}} & \textcolor{white}{\textbf{Description}} & \textcolor{white}{\textbf{Priorité}} \\
+    \hline
+    \endfirsthead
+    
+    TEST-01 & Catalogue de Tests & Afficher la liste des tests disponibles avec descriptions & Haute \\
+    \hline
+    TEST-02 & MMAS-8 & Test de Morisky (8 items) pour mesurer l'adhésion médicamenteuse & Haute \\
+    \hline
+    TEST-03 & PHQ-9 & Questionnaire de santé du patient pour évaluer la dépression & Haute \\
+    \hline
+    TEST-04 & GAD-7 & Échelle d'anxiété généralisée (7 items) & Haute \\
+    \hline
+    TEST-05 & BMQ & Beliefs about Medicines Questionnaire - croyances sur les médicaments & Haute \\
+    \hline
+    TEST-06 & MARS-5 & Medication Adherence Report Scale - attitudes envers les médicaments & Moyenne \\
+    \hline
+    TEST-07 & Brief-IPQ & Perception de la maladie (version courte) & Moyenne \\
+    \hline
+    TEST-08 & SE-CHRONIC & Auto-efficacité pour maladies chroniques & Moyenne \\
+    \hline
+    TEST-09 & TSS & Therapeutic Social Support - support social thérapeutique & Basse \\
+    \hline
+    TEST-10 & Scoring Automatique & Calcul automatique des scores selon les grilles validées & Haute \\
+    \hline
+    TEST-11 & Interprétation & Génération d'interprétations cliniques basées sur les scores & Haute \\
+    \hline
+    TEST-12 & Historique & Consultation de l'historique des tests passés & Moyenne \\
+    \hline
+\end{longtable}
+
+\subsection{Module Profil Psychologique (PROF)}
+
+\begin{longtable}{|p{2cm}|p{4cm}|p{7cm}|p{1.5cm}|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Fonctionnalité}} & \textcolor{white}{\textbf{Description}} & \textcolor{white}{\textbf{Priorité}} \\
+    \hline
+    
+    PROF-01 & Génération Profil & Création automatique du profil psychologique après les tests & Haute \\
+    \hline
+    PROF-02 & Classification & Attribution d'un type de profil (Anxieux, Résilient, Motivé, etc.) & Haute \\
+    \hline
+    PROF-03 & Scores Dimensionnels & Calcul des scores : anxiété, dépression, motivation, auto-efficacité, support social & Haute \\
+    \hline
+    PROF-04 & Score de Risque & Calcul du score de risque de non-adhésion (0-1) & Haute \\
+    \hline
+    PROF-05 & Résumé IA & Génération d'un résumé personnalisé par l'IA & Moyenne \\
+    \hline
+    PROF-06 & Consultation Profil & Visualisation du profil avec graphiques & Moyenne \\
+    \hline
+\end{longtable}
+
+\subsection{Module Prédiction d'Adhésion (PRED)}
+
+\begin{longtable}{|p{2cm}|p{4cm}|p{7cm}|p{1.5cm}|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Fonctionnalité}} & \textcolor{white}{\textbf{Description}} & \textcolor{white}{\textbf{Priorité}} \\
+    \hline
+    
+    PRED-01 & Modèle Multi-factoriel & Prédiction basée sur 7 facteurs pondérés selon la recherche & Haute \\
+    \hline
+    PRED-02 & Facteurs de Risque & Identification et affichage des facteurs de risque personnels & Haute \\
+    \hline
+    PRED-03 & Niveau de Risque & Classification : Faible, Modéré, Élevé, Critique & Haute \\
+    \hline
+    PRED-04 & Score de Confiance & Indication de la fiabilité de la prédiction & Moyenne \\
+    \hline
+    PRED-05 & Recommandations IA & Génération de recommandations personnalisées & Haute \\
+    \hline
+    PRED-06 & Historique Prédictions & Suivi de l'évolution des prédictions dans le temps & Moyenne \\
+    \hline
+\end{longtable}
+
+\textbf{Détail du Modèle de Prédiction :} \\
+
+\begin{tabularx}{\textwidth}{|l|c|X|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{Facteur}} & \textcolor{white}{\textbf{Poids}} & \textcolor{white}{\textbf{Source}} \\
+    \hline
+    Comportement Passé & 35\% & Historique des prises de doses (DoseLog) \\
+    \hline
+    Score MMAS-8 & 20\% & Auto-évaluation validée de l'adhésion \\
+    \hline
+    Dépression (PHQ-9) & 15\% & Impact majeur sur l'adhésion \\
+    \hline
+    Croyances (BMQ) & 10\% & Différentiel Nécessité-Préoccupations \\
+    \hline
+    Anxiété (GAD-7) & 8\% & Barrière potentielle \\
+    \hline
+    Complexité Traitement & 7\% & Nombre de médicaments et doses quotidiennes \\
+    \hline
+    Patterns Temporels & 5\% & Analyse des jours/heures problématiques \\
+    \hline
+\end{tabularx}
+
+\subsection{Module Traitement (TREAT)}
+
+\begin{longtable}{|p{2cm}|p{4cm}|p{7cm}|p{1.5cm}|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Fonctionnalité}} & \textcolor{white}{\textbf{Description}} & \textcolor{white}{\textbf{Priorité}} \\
+    \hline
+    
+    TREAT-01 & Création Plan & Génération d'un plan de traitement personnalisé & Haute \\
+    \hline
+    TREAT-02 & Génération IA & Contenu du plan généré par l'IA selon le profil & Haute \\
+    \hline
+    TREAT-03 & Médicaments & Gestion des médicaments (nom, dosage, fréquence, horaires) & Haute \\
+    \hline
+    TREAT-04 & Tâches Quotidiennes & Liste des tâches journalières à accomplir & Moyenne \\
+    \hline
+    TREAT-05 & Objectifs Hebdo & Définition et suivi des objectifs par semaine & Moyenne \\
+    \hline
+    TREAT-06 & Progression & Calcul et affichage du pourcentage de progression & Haute \\
+    \hline
+    TREAT-07 & Statuts Plan & Gestion des statuts : Brouillon, Actif, Pausé, Terminé, Annulé & Moyenne \\
+    \hline
+\end{longtable}
+
+\subsection{Module Suivi des Doses (DOSE)}
+
+\begin{longtable}{|p{2cm}|p{4cm}|p{7cm}|p{1.5cm}|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Fonctionnalité}} & \textcolor{white}{\textbf{Description}} & \textcolor{white}{\textbf{Priorité}} \\
+    \hline
+    
+    DOSE-01 & Doses du Jour & Affichage des doses planifiées pour aujourd'hui & Haute \\
+    \hline
+    DOSE-02 & Marquage Prise & Enregistrer qu'une dose a été prise avec horodatage & Haute \\
+    \hline
+    DOSE-03 & Marquage Oubli & Enregistrer qu'une dose a été oubliée avec raison optionnelle & Haute \\
+    \hline
+    DOSE-04 & Raisons d'Oubli & Liste prédéfinie : Oublié, Effets secondaires, Pas disponible, etc. & Moyenne \\
+    \hline
+    DOSE-05 & Délai de Prise & Calcul du retard/avance par rapport à l'horaire prévu & Moyenne \\
+    \hline
+    DOSE-06 & Notes & Ajout de notes personnelles (ressenti, effets) & Basse \\
+    \hline
+    DOSE-07 & Streak & Calcul des séries de jours consécutifs d'adhésion & Moyenne \\
+    \hline
+    DOSE-08 & Statistiques & Taux d'adhésion global et par médicament & Haute \\
+    \hline
+\end{longtable}
+
+\subsection{Module Recommandations (REC)}
+
+\begin{longtable}{|p{2cm}|p{4cm}|p{7cm}|p{1.5cm}|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Fonctionnalité}} & \textcolor{white}{\textbf{Description}} & \textcolor{white}{\textbf{Priorité}} \\
+    \hline
+    
+    REC-01 & Génération & Création de recommandations basées sur le profil & Haute \\
+    \hline
+    REC-02 & Catégorisation & Catégories : Médicaments, Style de vie, Santé mentale, Social, Exercice & Haute \\
+    \hline
+    REC-03 & Priorité & Attribution de priorité (1-5) à chaque recommandation & Moyenne \\
+    \hline
+    REC-04 & Étapes Actions & Liste d'étapes concrètes pour chaque recommandation & Haute \\
+    \hline
+    REC-05 & Bénéfices & Explication des bénéfices attendus & Moyenne \\
+    \hline
+    REC-06 & Difficulté & Niveau de difficulté : Facile, Moyen, Difficile & Basse \\
+    \hline
+    REC-07 & Suivi Complétion & Marquage des recommandations complétées & Moyenne \\
+    \hline
+\end{longtable}
+
+\subsection{Module Motivation IA (MOTIV)}
+
+\begin{longtable}{|p{2cm}|p{4cm}|p{7cm}|p{1.5cm}|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Fonctionnalité}} & \textcolor{white}{\textbf{Description}} & \textcolor{white}{\textbf{Priorité}} \\
+    \hline
+    
+    MOTIV-01 & Message Motivation & Génération de messages motivationnels personnalisés & Haute \\
+    \hline
+    MOTIV-02 & Chat IA & Conversation avec l'assistant IA pour support psychologique & Haute \\
+    \hline
+    MOTIV-03 & Historique Chat & Conservation de l'historique des conversations & Moyenne \\
+    \hline
+    MOTIV-04 & Contexte Patient & Utilisation du profil et score d'adhésion dans les réponses & Haute \\
+    \hline
+\end{longtable}
+
+\subsection{Module Émotions (EMOT)}
+
+\begin{longtable}{|p{2cm}|p{4cm}|p{7cm}|p{1.5cm}|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Fonctionnalité}} & \textcolor{white}{\textbf{Description}} & \textcolor{white}{\textbf{Priorité}} \\
+    \hline
+    
+    EMOT-01 & Détection Faciale & Reconnaissance des émotions via caméra (8 émotions) & Moyenne \\
+    \hline
+    EMOT-02 & Analyse Texte & Détection d'émotions dans le texte écrit & Basse \\
+    \hline
+    EMOT-03 & Recommandations & Suggestions basées sur l'émotion détectée & Moyenne \\
+    \hline
+\end{longtable}
+
+\subsection{Module Administration (ADMIN)}
+
+\begin{longtable}{|p{2cm}|p{4cm}|p{7cm}|p{1.5cm}|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Fonctionnalité}} & \textcolor{white}{\textbf{Description}} & \textcolor{white}{\textbf{Priorité}} \\
+    \hline
+    
+    ADMIN-01 & Dashboard & Tableau de bord avec statistiques globales & Haute \\
+    \hline
+    ADMIN-02 & Liste Patients & Affichage et recherche des patients inscrits & Haute \\
+    \hline
+    ADMIN-03 & Détail Patient & Consultation du profil complet d'un patient & Haute \\
+    \hline
+    ADMIN-04 & Analytics & Graphiques et métriques d'utilisation & Moyenne \\
+    \hline
+    ADMIN-05 & Gestion Tests & Administration des définitions de tests & Moyenne \\
+    \hline
+    ADMIN-06 & Export Données & Export des données anonymisées pour analyse & Basse \\
+    \hline
+\end{longtable}
+
+\section{Besoins Non Fonctionnels}
+
+\begin{longtable}{|p{2.5cm}|p{4cm}|p{7cm}|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{Catégorie}} & \textcolor{white}{\textbf{Exigence}} & \textcolor{white}{\textbf{Description}} \\
+    \hline
+    \endfirsthead
+    
+    \multirow{\textbf{Performance}} 
+    & Temps de réponse API & < 500ms pour 95\% des requêtes \\
+    \cline{2-3}
+    & Charge simultanée & Support de 100 utilisateurs concurrents \\
+    \cline{2-3}
+    & Disponibilité & 99\% de disponibilité hors maintenance \\
+    \hline
+    
+    \multirow{\textbf{Sécurité}}
+    & Chiffrement MDP & BCrypt avec salt \\
+    \cline{2-3}
+    & Données sensibles & Stockage sécurisé des données médicales \\
+    \cline{2-3}
+    & Sessions & Gestion sécurisée avec expiration \\
+    \hline
+    
+    \multirow{\textbf{Portabilité}}
+    & Mobile & Android (API 21+), iOS (via Flutter) \\
+    \cline{2-3}
+    & Web & Navigateurs modernes (Chrome, Firefox, Edge) \\
+    \hline
+    
+    \multirow{\textbf{Maintenabilité}}
+    & Architecture & Modulaire par domaine (DDD) \\
+    \cline{2-3}
+    & Documentation & Code documenté, API Swagger \\
+    \hline
+    
+    \multirow{\textbf{Utilisabilité}}
+    & Interface & Design moderne et intuitif \\
+    \cline{2-3}
+    & Accessibilité & Support des lecteurs d'écran \\
+    \hline
+\end{longtable}
+
+\newpage
+
+%==============================================================================
+% CHAPITRE 3 : ARCHITECTURE TECHNIQUE
+%==============================================================================
+\chapter{Architecture Technique}
+
+\section{Vue d'Ensemble}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{|l|X|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{Composant}} & \textcolor{white}{\textbf{Technologie}} \\
+    \hline
+    Backend API & Spring Boot 3.5.7 (Java 17) \\
+    \hline
+    Base de données & PostgreSQL 15 \\
+    \hline
+    Application Mobile & Flutter (Dart 3.9.2) \\
+    \hline
+    Application Web Patient & Angular 20 \\
+    \hline
+    Dashboard Admin & Angular 20 \\
+    \hline
+    Backend IA & Flask (Python) \\
+    \hline
+    API IA & OpenRouter (Tongyi/Gemini) \\
+    \hline
+    Détection Émotions & EmotiEffLib (ONNX Runtime) \\
+    \hline
+    Conteneurisation & Docker, Docker Compose \\
+    \hline
+    Qualité Code & SonarQube \\
+    \hline
+\end{tabularx}
+\end{center}
+
+\section{Architecture Backend}
+
+L'architecture suit un pattern modulaire par domaine (Domain-Driven Design) :
+
+\begin{verbatim}
+src/main/java/com/projet/adhesionapp/
+├── identity/       # Gestion utilisateurs, authentification
+├── profile/        # Profils psychologiques
+├── assessment/     # Tests psychométriques
+├── treatment/      # Plans de traitement
+├── analytics/      # Prédictions d'adhésion
+├── recommendation/ # Recommandations personnalisées
+├── habit/          # Suivi des doses
+├── ai/             # Intégration IA
+├── common/         # Utilitaires partagés
+└── config/         # Configuration Spring
+\end{verbatim}
+
+\section{Modèle de Données}
+
+\subsection{Entités Principales}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{|l|X|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{Entité}} & \textcolor{white}{\textbf{Description}} \\
+    \hline
+    User & Utilisateur (patient) avec informations personnelles \\
+    \hline
+    PsychologicalProfile & Profil psychologique calculé \\
+    \hline
+    TestDefinition & Définition d'un test psychométrique \\
+    \hline
+    TestSession & Session de passage d'un test \\
+    \hline
+    Answer & Réponse à une question de test \\
+    \hline
+    TreatmentPlan & Plan de traitement personnalisé \\
+    \hline
+    Medication & Médicament prescrit \\
+    \hline
+    DailyTask & Tâche quotidienne du plan \\
+    \hline
+    DoseLog & Log de prise/oubli de dose \\
+    \hline
+    Prediction & Prédiction d'adhésion \\
+    \hline
+    Recommendation & Recommandation personnalisée \\
+    \hline
+\end{tabularx}
+\end{center}
+
+\section{API REST}
+
+\subsection{Description des Services API}
+
+L'API REST expose plusieurs catégories de services permettant la communication entre les applications clientes et le backend : \\
+
+\textbf{Services d'Authentification :} Ces services permettent la gestion du cycle de vie des utilisateurs. Un service POST gère l'inscription des nouveaux patients en créant leur compte avec les informations personnelles. Un autre service POST assure la connexion en vérifiant les identifiants et en établissant une session sécurisée. \\
+
+\textbf{Services de Tests Psychométriques :} Un service GET permet de récupérer la liste complète des tests disponibles (MMAS-8, PHQ-9, GAD-7, etc.) avec leurs descriptions. Un service POST permet de démarrer une nouvelle session de test pour un patient. Un autre service POST permet de soumettre les réponses d'une session de test et déclenche le calcul automatique des scores. \\
+
+\textbf{Services de Profils Psychologiques :} Un service GET permet de récupérer le profil psychologique complet d'un utilisateur incluant ses scores dimensionnels et son type de profil. Un service POST permet de créer ou régénérer un profil basé sur les derniers résultats de tests. \\
+
+\textbf{Services de Prédiction :} Un service GET génère une prédiction d'adhésion pour un utilisateur en appliquant le modèle multi-factoriel. Un autre service GET calcule et retourne le score d'adhésion actuel basé sur l'historique des prises de doses. \\
+
+\textbf{Services de Traitements :} Un service POST permet de créer un nouveau plan de traitement personnalisé avec génération de contenu par l'IA. Un service GET récupère tous les plans de traitement associés à un utilisateur. \\
+
+\textbf{Services de Suivi des Doses :} Un service GET retourne la liste des doses planifiées pour la journée en cours. Deux services POST permettent respectivement de marquer une dose comme prise (avec horodatage) ou comme oubliée (avec possibilité d'indiquer une raison). \\
+
+\textbf{Services d'Intelligence Artificielle :} Un service POST génère des messages motivationnels personnalisés selon le profil et le contexte du patient. Un autre service POST permet d'avoir une conversation interactive avec l'assistant IA pour un support psychologique continu. \\
+
+\newpage
+
+%==============================================================================
+% CHAPITRE 4 : INTERFACES UTILISATEUR
+%==============================================================================
+\chapter{Interfaces Utilisateur}
+
+\section{Application Mobile (Flutter)}
+
+\subsection{Écrans Principaux}
+
+\begin{longtable}{|l|p{8cm}|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{Écran}} & \textcolor{white}{\textbf{Description}} \\
+    \hline
+    
+    Login & Formulaire de connexion avec email/mot de passe \\
+    \hline
+    Register & Inscription avec validation des champs \\
+    \hline
+    Onboarding & Passage des tests initiaux obligatoires \\
+    \hline
+    Dashboard & Vue d'ensemble avec score wellness, statistiques, raccourcis \\
+    \hline
+    Tests & Catalogue et passage des tests psychométriques \\
+    \hline
+    Profil & Visualisation du profil psychologique avec graphiques \\
+    \hline
+    Prédictions & Affichage de la prédiction d'adhésion et facteurs de risque \\
+    \hline
+    Doses du jour & Liste des doses avec boutons de confirmation \\
+    \hline
+    Statistiques & Graphiques d'adhésion sur différentes périodes \\
+    \hline
+    Médicaments & Gestion des médicaments personnels \\
+    \hline
+    Plan de Traitement & Détail du plan avec progression \\
+    \hline
+    Recommandations & Liste des recommandations personnalisées \\
+    \hline
+    Motivation & Chat avec l'assistant IA \\
+    \hline
+    Émotions & Détection faciale d'émotions via caméra \\
+    \hline
+    Historique & Historique des tests et prédictions \\
+    \hline
+\end{longtable}
+
+\section{Application Web Patient (Angular)}
+
+\begin{longtable}{|l|p{8cm}|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{Vue}} & \textcolor{white}{\textbf{Fonctionnalités}} \\
+    \hline
+    
+    Login / Register & Authentification et inscription des patients \\
+    \hline
+    Dashboard & Tableau de bord personnel avec score wellness et statistiques \\
+    \hline
+    Tests & Catalogue et passage des tests psychométriques en ligne \\
+    \hline
+    Profil & Visualisation et édition du profil psychologique \\
+    \hline
+    Prédictions & Consultation des prédictions d'adhésion et facteurs de risque \\
+    \hline
+    Médicaments & Gestion des médicaments et suivi des prises \\
+    \hline
+    Plans de Traitement & Consultation des plans de traitement actifs \\
+    \hline
+    Recommandations & Affichage des recommandations personnalisées \\
+    \hline
+    Motivation & Interface de chat avec l'assistant IA \\
+    \hline
+    Émotions & Détection d'émotions via webcam \\
+    \hline
+    Historique & Historique complet des tests et résultats \\
+    \hline
+\end{longtable}
+
+\section{Dashboard Administrateur (Angular)}
+
+\begin{longtable}{|l|p{8cm}|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{Vue}} & \textcolor{white}{\textbf{Fonctionnalités}} \\
+    \hline
+    
+    Login Admin & Authentification sécurisée pour administrateurs \\
+    \hline
+    Dashboard & KPIs globaux, graphiques d'utilisation, alertes \\
+    \hline
+    Gestion Patients & Liste paginée, recherche, filtres, détail patient \\
+    \hline
+    Données Utilisateurs & Consultation des profils et données psychologiques \\
+    \hline
+    Gestion Tests & Administration des définitions de tests \\
+    \hline
+    Analytics & Métriques avancées et exports de données \\
+    \hline
+\end{longtable}
+
+\newpage
+
+%==============================================================================
+% CHAPITRE 5 : CONTRAINTES ET LIVRABLES
+%==============================================================================
+\chapter{Contraintes et Livrables}
+
+\section{Contraintes du Projet}
+
+\subsection{Contraintes Temporelles}
+\begin{itemize}
+    \item \textbf{Durée :} 8 semaines (01/11/2025 - 22/12/2025)
+    \item \textbf{Deadline :} 22 Décembre 2025
+\end{itemize}
+
+\subsection{Contraintes Techniques}
+\begin{itemize}
+    \item Utilisation obligatoire de Spring Boot pour le backend
+    \item Développement multiplateforme avec Flutter
+    \item Base de données relationnelle PostgreSQL
+    \item Respect des bonnes pratiques de développement
+\end{itemize}
+
+\subsection{Contraintes Qualité}
+
+\subsubsection{Tests Unitaires (JUnit)}
+\begin{itemize}
+    \item Couverture de code minimale : \textbf{80\%}
+    \item Intégration de JUnit dans le processus CI/CD pour exécution automatique
+    \item Tests des services, contrôleurs et utilitaires
+    \item Utilisation de Mockito pour les tests isolés
+\end{itemize}
+
+\subsubsection{Tests Fonctionnels (Selenium)}
+\begin{itemize}
+    \item Automatisation des tests fonctionnels de l'application web
+    \item Focus sur les scénarios critiques (authentification, tests psychométriques, suivi des doses)
+    \item Exécution des tests sur plusieurs navigateurs (Chrome, Firefox, Edge)
+    \item Tests de bout en bout des parcours utilisateur
+\end{itemize}
+
+\subsubsection{Analyse de Qualité de Code (SonarQube)}
+\begin{itemize}
+    \item Analyse statique du code pour détecter les problèmes de qualité
+    \item Seuils à ne pas dépasser :
+    \begin{itemize}
+        \item Bugs : 0 critique, < 10 majeurs
+        \item Vulnérabilités : 0 critique, 0 haute
+        \item Code Smells : < 100
+        \item Duplication de code : < 5\%
+    \end{itemize}
+    \item Intégration CI/CD : SonarScanner exécuté automatiquement après chaque build
+    \item Correction obligatoire des problèmes critiques avant merge
+\end{itemize}
+
+\subsubsection{Tests de Performance (JMeter)}
+\begin{itemize}
+    \item Développement de scénarios de test pour les cas critiques
+    \item Configuration d'outils de monitoring pour surveiller les performances serveur
+    \item Documentation complète incluant :
+    \begin{itemize}
+        \item Description des scénarios de test
+        \item Résultats et métriques collectées
+        \item Recommandations d'optimisation
+    \end{itemize}
+    \item Seuils de performance : temps de réponse < 500ms pour 95\% des requêtes
+\end{itemize}
+
+\subsubsection{Normes de Codage}
+\begin{itemize}
+    \item Respect des conventions Java (Google Java Style Guide)
+    \item Respect des conventions Dart (Effective Dart)
+    \item Documentation Javadoc/DartDoc pour les API publiques
+\end{itemize}
+
+\section{Livrables}
+
+\begin{tabularx}{\textwidth}{|c|l|X|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{N°}} & \textcolor{white}{\textbf{Livrable}} & \textcolor{white}{\textbf{Description}} \\
+    \hline
+    L1 & Cahier des Charges & Ce document \\
+    \hline
+    L2 & Plan Assurance Qualité & Processus et critères qualité\\
+    \hline
+    L3 & Code Source Backend & API Spring Boot complète \\
+    \hline
+    L4 & Code Source Mobile & Application Flutter\\
+    \hline
+    L5 & Code Source Web & Applications Angular \\
+    \hline
+    L6 & Rapport SonarQube & Analyse qualité du code \\
+    \hline
+    L7 & Rapport Tests & Résultats JUnit, JMeter, Selenium \\
+    \hline
+    L8 & Documentation API & Swagger/OpenAPI \\
+    \hline
+    L9 & Manuel Utilisateur & Guide d'utilisation \\
+    \hline
+\end{tabularx}
+
+\section{Critères d'Acceptation}
+
+\begin{enumerate}
+    \item Toutes les fonctionnalités de priorité "Haute" sont implémentées
+    \item Les tests unitaires passent avec succès
+    \item Les tests de performance respectent les seuils définis
+    \item Le code respecte les métriques SonarQube
+    \item L'application est déployable via Docker
+    \item La documentation est complète et à jour
+\end{enumerate}
+
+\newpage
+
+%==============================================================================
+% CHAPITRE 6 : GLOSSAIRE
+%==============================================================================
+\chapter{Glossaire}
+
+\begin{tabularx}{\textwidth}{|l|X|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{Terme}} & \textcolor{white}{\textbf{Définition}} \\
+    \hline
+    Adhésion thérapeutique & Degré auquel le patient suit les prescriptions médicales \\
+    \hline
+    MMAS-8 & Morisky Medication Adherence Scale - échelle validée d'adhésion \\
+    \hline
+    PHQ-9 & Patient Health Questionnaire - évaluation de la dépression \\
+    \hline
+    GAD-7 & Generalized Anxiety Disorder - échelle d'anxiété \\
+    \hline
+    BMQ & Beliefs about Medicines Questionnaire - croyances sur les médicaments \\
+    \hline
+    Profil psychométrique & Ensemble des scores aux tests psychologiques d'un patient \\
+    \hline
+    Score de risque & Probabilité calculée de non-adhésion (0-1) \\
+    \hline
+    DoseLog & Enregistrement d'un événement de prise de médicament \\
+    \hline
+    Streak & Série de jours consécutifs d'adhésion parfaite \\
+    \hline
+    OpenRouter & Service d'API pour accéder à différents modèles d'IA \\
+    \hline
+    EmotiEffLib & Bibliothèque de reconnaissance d'émotions faciales \\
+    \hline
+    ONNX & Open Neural Network Exchange - format de modèle ML portable \\
+    \hline
+\end{tabularx}
+
+\newpage
+
+%==============================================================================
+% SIGNATURES
+%==============================================================================
+\chapter*{Validation du Document}
+\addcontentsline{toc}{chapter}{Validation du Document}
+
+\vspace{1cm}
+
+\begin{tabularx}{\textwidth}{|X|X|}
+    \hline
+    \rowcolor{emsiblue}\textcolor{white}{\textbf{Rôle}} & \textcolor{white}{\textbf{Nom Complet}} \\
+    \hline
+    & & \\
+    Chef de Projet & ISSAME Imad \\
+    & & \\
+    \hline
+    & & \\
+    Développeur/Testeur & AGOUMI Mohammed Amine \\
+    & & \\
+    \hline
+    & & \\
+    Développeur/Testeur & JABRANE Mohamed Yahya \\
+    & & \\
+    \hline
+    & & \\
+    Encadrant & M. ESSABAR Driss \\
+    & & \\
+    \hline
+\end{tabularx}
+
+\vspace{2cm}
+
+\begin{center}
+\textit{Document généré le 01 Novembre 2025}
+\end{center}
+
+\end{document}

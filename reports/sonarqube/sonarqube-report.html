@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SonarQube Report - Adhesion App</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { background: linear-gradient(135deg, #4CAF50 0%, #2196F3 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 20px; }
+        .header h1 { font-size: 2em; margin-bottom: 10px; }
+        .header p { opacity: 0.9; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .metric-card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
+        .metric-value { font-size: 2.5em; font-weight: bold; margin: 10px 0; }
+        .metric-label { color: #666; font-size: 0.9em; text-transform: uppercase; }
+        .rating-A { color: #00C853; }
+        .rating-B { color: #64DD17; }
+        .rating-C { color: #FFD600; }
+        .rating-D { color: #FF9100; }
+        .rating-E { color: #FF1744; }
+        .bugs { border-left: 4px solid #FF1744; }
+        .vulnerabilities { border-left: 4px solid #FF9100; }
+        .code-smells { border-left: 4px solid #FFD600; }
+        .coverage { border-left: 4px solid #2196F3; }
+        .duplications { border-left: 4px solid #9C27B0; }
+        .lines { border-left: 4px solid #4CAF50; }
+        .section { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .section h2 { color: #333; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .rating-badge { display: inline-block; width: 40px; height: 40px; border-radius: 50%; color: white; text-align: center; line-height: 40px; font-weight: bold; font-size: 1.2em; }
+        .rating-badge.A { background: #00C853; }
+        .rating-badge.B { background: #64DD17; }
+        .rating-badge.C { background: #FFD600; color: #333; }
+        .rating-badge.D { background: #FF9100; }
+        .rating-badge.E { background: #FF1744; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f9f9f9; font-weight: 600; }
+        .footer { text-align: center; color: #666; padding: 20px; }
+        .summary-row { display: flex; justify-content: space-around; flex-wrap: wrap; gap: 20px; }
+        .summary-item { text-align: center; }
+        .summary-item .label { font-size: 0.8em; color: #666; margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 SonarQube Analysis Report</h1>
+            <p><strong>Project:</strong> adhesion-app (com.projet:adhesion-app)</p>
+            <p><strong>Analysis Date:</strong> December 15, 2025</p>
+            <p><strong>SonarQube Server:</strong> http://localhost:9000</p>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card bugs">
+                <div class="metric-label">Bugs</div>
+                <div class="metric-value rating-E">12</div>
+                <div class="summary-item">
+                    <span class="rating-badge E">E</span>
+                    <div class="label">Reliability Rating</div>
+                </div>
+            </div>
+            
+            <div class="metric-card vulnerabilities">
+                <div class="metric-label">Vulnerabilities</div>
+                <div class="metric-value rating-E">2</div>
+                <div class="summary-item">
+                    <span class="rating-badge E">E</span>
+                    <div class="label">Security Rating</div>
+                </div>
+            </div>
+            
+            <div class="metric-card code-smells">
+                <div class="metric-label">Code Smells</div>
+                <div class="metric-value rating-C">137</div>
+                <div class="summary-item">
+                    <span class="rating-badge A">A</span>
+                    <div class="label">Maintainability</div>
+                </div>
+            </div>
+            
+            <div class="metric-card coverage">
+                <div class="metric-label">Coverage</div>
+                <div class="metric-value">24.2%</div>
+                <div class="label">Test Coverage</div>
+            </div>
+            
+            <div class="metric-card duplications">
+                <div class="metric-label">Duplications</div>
+                <div class="metric-value">3.7%</div>
+                <div class="label">Duplicated Lines</div>
+            </div>
+            
+            <div class="metric-card lines">
+                <div class="metric-label">Lines of Code</div>
+                <div class="metric-value">7,064</div>
+                <div class="label">Total NCLOC</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Quality Gate Summary</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Value</th>
+                        <th>Rating</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Bugs</td>
+                        <td>12</td>
+                        <td><span class="rating-badge E">E</span></td>
+                        <td>⚠️ Needs Improvement</td>
+                    </tr>
+                    <tr>
+                        <td>Vulnerabilities</td>
+                        <td>2</td>
+                        <td><span class="rating-badge E">E</span></td>
+                        <td>⚠️ Needs Improvement</td>
+                    </tr>
+                    <tr>
+                        <td>Code Smells</td>
+                        <td>137</td>
+                        <td><span class="rating-badge A">A</span></td>
+                        <td>✅ Good</td>
+                    </tr>
+                    <tr>
+                        <td>Coverage</td>
+                        <td>24.2%</td>
+                        <td>-</td>
+                        <td>📈 Can Improve</td>
+                    </tr>
+                    <tr>
+                        <td>Duplications</td>
+                        <td>3.7%</td>
+                        <td>-</td>
+                        <td>✅ Good (&lt;5%)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>📈 Recommendations</h2>
+            <ul style="padding-left: 20px; line-height: 2;">
+                <li><strong>Fix 12 bugs</strong> to improve reliability rating from E to A</li>
+                <li><strong>Address 2 security vulnerabilities</strong> to improve security rating</li>
+                <li><strong>Increase test coverage</strong> from 24.2% to at least 80%</li>
+                <li><strong>Review 137 code smells</strong> for maintainability improvements</li>
+                <li>Maintain duplications under 5% (currently 3.7% ✅)</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>🔗 Resources</h2>
+            <p><strong>Full Dashboard:</strong> <a href="http://localhost:9000/dashboard?id=com.projet%3Aadhesion-app" target="_blank">http://localhost:9000/dashboard?id=com.projet:adhesion-app</a></p>
+            <p><strong>Issues List:</strong> <a href="http://localhost:9000/project/issues?id=com.projet%3Aadhesion-app" target="_blank">View All Issues</a></p>
+            <p><strong>Security Hotspots:</strong> <a href="http://localhost:9000/security_hotspots?id=com.projet%3Aadhesion-app" target="_blank">Review Security Hotspots</a></p>
+        </div>
+
+        <div class="footer">
+            <p>Generated by SonarQube Analysis | adhesion-app v0.0.1-SNAPSHOT</p>
+            <p>Report exported on December 15, 2025</p>
+        </div>
+    </div>
+</body>
+</html>

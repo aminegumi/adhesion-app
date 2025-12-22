@@ -1,0 +1,1377 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{setspace}
+
+\geometry{margin=2.5cm}
+
+% En-têtes et pieds de page
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Plan d'Assurance Qualité - Adhésion-App}
+\fancyhead[R]{\small EMSI 2025-2026}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% Formatage des titres
+\titleformat{\chapter}[display]
+{\normalfont\huge\bfseries}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
+
+\begin{document}
+
+%==============================================================================
+% PAGE DE GARDE
+%==============================================================================
+\begin{titlepage}
+    \enlargethispage{2cm}
+    \centering
+    \vspace*{0.3cm}
+
+    \includegraphics[width=0.4\linewidth]{EMSI.png}\\[0.4cm]
+
+    {\Large \textbf{École Marocaine des Sciences de l'Ingénieur}}\\[0.2cm]
+    {\large Marrakech}\\[0.2cm]
+    {\large Filière : Ingénierie Informatique}\\[0.8cm]
+
+    \rule{\linewidth}{1pt}\\[0.8cm]
+    {\Huge \textbf{PLAN D'ASSURANCE QUALITÉ}}\\[0.2cm]
+    {\Huge \textbf{PROJET (PAQP)}}\\[0.4cm]
+    \rule{\linewidth}{1pt}\\[0.8cm]
+
+    {\LARGE \textbf{Application de Prédiction des Comportements}}\\[0.4cm]
+    {\LARGE \textbf{d'Adhésion aux Thérapies}}\\[0.4cm]
+    {\Large \textbf{Basée sur Profils Psychométriques}}\\[0.4cm]
+    {\large \textit{Nom de l'application : Serenity}}\\[1.2cm]
+
+    \small
+    \begin{tabular}{ll}
+        \textbf{Version du document :} & 1.0 \\
+        \textbf{État :} & Version finale \\
+        \textbf{Référence :} & PAQP-ADHESION-2025-001 \\
+        \textbf{Date de création :} & 01 Novembre 2025 \\
+        \textbf{Date de mise à jour :} & 16 Décembre 2025 \\
+    \end{tabular}\\[1.2cm]
+
+    \textbf{Équipe de Projet :}\\[0.4cm]
+    \footnotesize
+    \begin{tabular}{|l|l|}
+        \hline
+        \textbf{Nom et Prénom} & \textbf{Fonction} \\
+        \hline
+        ISSAME Imad & Développeur / Testeur \\
+        \hline
+        AGOUMI Mohammed Amine & Développeur / Testeur \\
+        \hline
+        JABRANE Mohamed Yahya & Développeur / Testeur \\
+        \hline
+    \end{tabular}
+
+    \vfill
+    {\normalsize \textbf{Année Universitaire 2025--2026}}
+\end{titlepage}
+
+
+%==============================================================================
+% TABLE DES MATIÈRES
+%==============================================================================
+\tableofcontents
+\newpage
+
+%==============================================================================
+% HISTORIQUE DES RÉVISIONS
+%==============================================================================
+\chapter*{Historique des Révisions du Document}
+\addcontentsline{toc}{chapter}{Historique des Révisions du Document}
+
+Le tableau ci-dessous présente l'historique des modifications apportées au présent Plan d'Assurance Qualité Projet (PAQP). Chaque révision est documentée avec sa version, sa date, une description des changements effectués ainsi que le nom de l'auteur responsable de la modification. Ce suivi rigoureux permet de tracer l'évolution du document et d'assurer sa cohérence tout au long du cycle de vie du projet.
+
+\vspace{0.5cm}
+
+\begin{tabularx}{\textwidth}{|c|c|X|l|}
+    \hline
+    \textbf{Version} & \textbf{Date} & \textbf{Description des modifications} & \textbf{Auteur} \\
+    \hline
+    0.1 & 28/11/2025 & Création initiale du document et définition de la structure & Équipe \\
+    \hline
+    0.2 & 05/11/2025 & Ajout des sections Organisation et Planning & Équipe \\
+    \hline
+    0.3 & 12/12/2025 & Intégration de la stratégie de tests et des métriques qualité & Équipe \\
+    \hline
+    1.0 & 16/12/2025 & Version finale validée après relecture complète & Équipe \\
+    \hline
+\end{tabularx}
+
+\vspace{1cm}
+
+\textbf{Diffusion du document :} Ce document est diffusé à l'ensemble de l'équipe projet, à l'encadrant pédagogique et aux responsables des matières concernées (Management de la Qualité, Développement Multiplateforme, JEE2, PFA).
+
+\newpage
+
+%==============================================================================
+% CHAPITRE 1 : INTRODUCTION ET CONTEXTE
+%==============================================================================
+\chapter{Introduction et Contexte du Projet}
+
+\section{Objet du Document}
+
+Le présent document constitue le Plan d'Assurance Qualité Projet (PAQP) de l'application \textbf{Serenity}, également désignée sous le nom technique \textbf{Adhésion-App}. Ce plan définit de manière exhaustive l'ensemble des dispositions, méthodes, outils et responsabilités mis en œuvre pour garantir la qualité du produit logiciel développé ainsi que la qualité des processus de développement employés.
+
+Le PAQP a pour vocation de :
+\begin{itemize}
+    \item Définir les objectifs qualité à atteindre pour le projet
+    \item Identifier les responsabilités de chaque membre de l'équipe en matière de qualité
+    \item Décrire les processus de vérification et de validation mis en place
+    \item Préciser les critères et métriques permettant d'évaluer la qualité du produit
+    \item Documenter les outils et méthodes de test utilisés
+    \item Établir les normes et conventions de codage à respecter
+\end{itemize}
+
+Ce document s'adresse à l'ensemble des parties prenantes du projet : l'équipe de développement, l'encadrant pédagogique et les responsables des différentes matières académiques impliquées.
+
+\section{Contexte Académique du Projet}
+
+Dans le cadre de notre formation à l'\textbf{École Marocaine des Sciences de l'Ingénieur (EMSI)}, filière \textbf{Ingénierie Informatique}, nous réalisons un \textbf{projet académique transversal} qui constitue une mise en pratique concrète des enseignements reçus dans plusieurs matières complémentaires.
+
+Ce projet transversal implique les matières suivantes :
+
+\begin{itemize}
+    \item \textbf{Management de la Qualité :} Cette matière nous permet d'appliquer les principes de l'assurance qualité logicielle. Nous mettons en place des processus qualité rigoureux, définissons des métriques mesurables et utilisons des outils d'analyse statique du code (SonarQube) pour garantir un niveau de qualité élevé. La rédaction du présent PAQP est directement issue des enseignements de cette matière.
+    
+    \item \textbf{Développement Multiplateforme :} Cette matière nous fournit les compétences nécessaires pour concevoir et développer une application mobile cross-platform avec le framework \textbf{Flutter}. L'application mobile constitue l'interface principale utilisée par les patients pour passer les tests psychométriques et consulter leurs prédictions d'adhésion.
+    
+    \item \textbf{JEE2 (Java Enterprise Edition) :} Cette matière nous permet de développer le backend de l'application en utilisant \textbf{Spring Boot}. Nous concevons une architecture RESTful robuste, gérons la persistance des données avec PostgreSQL et implémentons les mécanismes de sécurité (authentification, autorisation), ainsi que le développement d'une application web avec Angular.
+    
+    \item \textbf{Projet de Fin d'Année (PFA) :} Cette matière chapote l'ensemble du projet et assure l'intégration cohérente de tous les composants. Elle couvre également l'ntégration d’intelligence artificielle.
+\end{itemize}
+
+\section{Problématique Adressée}
+
+L'\textbf{adhésion thérapeutique} représente un enjeu majeur de santé publique à l'échelle mondiale. Selon les données de l'\textbf{Organisation Mondiale de la Santé (OMS)}, environ \textbf{50\% des patients} atteints de maladies psychiques et chroniques ne respectent pas correctement leurs prescriptions médicales. Cette non-adhésion aux traitements entraîne des conséquences graves :
+
+\begin{itemize}
+    \item \textbf{Complications de santé :} Aggravation de la maladie, rechutes, hospitalisations évitables
+    \item \textbf{Coûts médicaux accrus :} Dépenses supplémentaires pour le système de santé
+    \item \textbf{Réduction de l'efficacité des traitements :} Les bénéfices attendus des médicaments ne sont pas atteints
+    \item \textbf{Impact psychologique :} Découragement des patients et des professionnels de santé
+\end{itemize}
+
+Les facteurs influençant l'adhésion thérapeutique sont multiples et interconnectés : facteurs liés au patient (croyances, motivation, état psychologique), facteurs liés au traitement (complexité, effets secondaires), facteurs liés au système de santé (relation médecin-patient, accessibilité) et facteurs socio-économiques.
+
+\section{Description de l'Application Serenity}
+
+Face à cette problématique, notre projet propose le développement de \textbf{Serenity}, une application multiplateforme innovante qui permet de :
+
+\begin{enumerate}
+    \item \textbf{Évaluer les profils psychométriques des patients :} L'application intègre plusieurs tests psychométriques cliniquement validés qui permettent d'évaluer différentes dimensions psychologiques du patient :
+    \begin{itemize}
+        \item \textbf{MMAS-8} (Morisky Medication Adherence Scale) : Évaluation du comportement d'adhésion aux médicaments
+        \item \textbf{PHQ-9} (Patient Health Questionnaire) : Dépistage et mesure de la sévérité de la dépression
+        \item \textbf{GAD-7} (Generalized Anxiety Disorder) : Évaluation de l'anxiété généralisée
+        \item \textbf{BMQ} (Beliefs about Medicines Questionnaire) : Analyse des croyances du patient vis-à-vis des médicaments
+    \end{itemize}
+    
+    \item \textbf{Prédire les comportements d'adhésion :} À partir des résultats des tests psychométriques, un modèle multi-factoriel calcule un score de prédiction d'adhésion. Ce score prend en compte les différentes dimensions évaluées et permet d'identifier les patients à risque de non-adhésion.
+    
+    \item \textbf{Générer des recommandations personnalisées :} Grâce à l'intégration d'un module d'intelligence artificielle (via l'API OpenRouter), l'application génère des recommandations adaptées au profil de chaque patient pour améliorer son adhésion thérapeutique.
+    
+    \item \textbf{Suivre l'évolution dans le temps :} L'application permet un suivi longitudinal de l'adhésion, avec la possibilité de marquer les prises de médicaments et de visualiser l'historique.
+\end{enumerate}
+
+\section{Architecture Technique de l'Application}
+
+L'application Serenity repose sur une architecture moderne et modulaire, composée des éléments suivants :
+
+\begin{itemize}
+    \item \textbf{Backend (API REST) :} Développé avec \textbf{Spring Boot} et \textbf{Java}. Le backend expose une API RESTful documentée avec Swagger/OpenAPI. Il implémente une architecture en couches (Controller, Service, Repository) respectant les principes du Domain-Driven Design (DDD).
+    
+    \item \textbf{Base de données :} \textbf{PostgreSQL 15} est utilisé comme système de gestion de base de données relationnelle. Les migrations de schéma sont gérées avec Flyway.
+    
+    \item \textbf{Application Mobile Patient :} Développée avec \textbf{Flutter}, cette application permet aux patients de passer les tests psychométriques, consulter leurs résultats et prédictions, et suivre leurs prises de médicaments.
+    
+    \item \textbf{Application Web Patient :} Développée avec \textbf{Angular 20}, cette interface web offre les mêmes fonctionnalités que l'application mobile pour les patients préférant utiliser un navigateur.
+    
+    \item \textbf{Dashboard Administrateur :} Également développé avec \textbf{Angular 20}, ce tableau de bord permet aux administrateurs de gérer les utilisateurs, configurer les tests et visualiser les statistiques globales.
+    
+    \item \textbf{Module Intelligence Artificielle :} Un backend Python avec \textbf{Flask} communique avec l'API \textbf{OpenRouter} pour générer des recommandations personnalisées basées sur les profils patients.
+    
+    \item \textbf{Conteneurisation :} L'ensemble de l'application est conteneurisé avec \textbf{Docker} et orchestré avec \textbf{Docker Compose} pour faciliter le déploiement.
+\end{itemize}
+
+\section{Documents de Référence}
+
+Le présent PAQP s'appuie sur les documents de référence suivants :
+
+\begin{itemize}
+    \item \textbf{CDC-ADHESION-2025-001 :} Cahier des Charges de l'application Adhésion-App (Version 1.0)
+    \item \textbf{ISO 9001:2015 :} Norme internationale relative aux systèmes de management de la qualité
+    \item \textbf{ISO/IEC 25010:2011 :} Modèle de qualité des systèmes et du logiciel (caractéristiques qualité)
+    \item \textbf{IEEE 730-2014 :} Standard for Software Quality Assurance Processes
+\end{itemize}
+
+\section{Terminologie et Abréviations}
+
+Afin de faciliter la lecture du document, voici la définition des termes et abréviations utilisés :
+
+\begin{itemize}
+    \item \textbf{PAQP :} Plan d'Assurance Qualité Projet
+    \item \textbf{CDC :} Cahier des Charges
+    \item \textbf{API :} Application Programming Interface
+    \item \textbf{REST :} Representational State Transfer
+    \item \textbf{CI/CD :} Continuous Integration / Continuous Deployment
+    \item \textbf{TU :} Tests Unitaires
+    \item \textbf{TF :} Tests Fonctionnels
+    \item \textbf{TP :} Tests de Performance
+    \item \textbf{MMAS-8 :} Morisky Medication Adherence Scale (8 items)
+    \item \textbf{PHQ-9 :} Patient Health Questionnaire (9 items)
+    \item \textbf{GAD-7 :} Generalized Anxiety Disorder (7 items)
+    \item \textbf{BMQ :} Beliefs about Medicines Questionnaire
+\end{itemize}
+
+\newpage
+
+%==============================================================================
+% CHAPITRE 2 : ORGANISATION DU PROJET
+%==============================================================================
+\chapter{Organisation du Projet}
+
+\section{Présentation de l'Équipe}
+
+L'équipe projet est composée de trois étudiants en dernière année du cycle ingénieur à l'École Marocaine des Sciences de l'Ingénieur (EMSI), filière Ingénierie Informatique. Conformément à la nature académique du projet et à la taille réduite de l'équipe, nous avons adopté une organisation horizontale et collaborative où chaque membre participe à l'ensemble des activités de développement et de test.
+
+Cette approche collaborative présente plusieurs avantages dans notre contexte :
+\begin{itemize}
+    \item Elle permet à chaque membre d'acquérir des compétences sur l'ensemble des technologies utilisées
+    \item Elle favorise le partage de connaissances et la montée en compétences collective
+    \item Elle assure une meilleure résilience en cas d'indisponibilité d'un membre
+    \item Elle facilite les revues de code croisées et améliore la qualité globale
+\end{itemize}
+
+Le tableau suivant présente les membres de l'équipe projet :
+
+\begin{center}
+\begin{tabular}{|l|l|l|}
+    \hline
+    \textbf{Nom et Prénom} & \textbf{Fonction} & \textbf{Contact} \\
+    \hline
+    ISSAME Imad & Développeur / Testeur & imad.issame@emsi-edu.ma \\
+    \hline
+    AGOUMI Mohammed Amine & Développeur / Testeur & mohammedamine.agoumi@emsi-edu.ma \\
+    \hline
+    JABRANE Mohamed Yahya & Développeur / Testeur & mohamedyahya.jabrane@emsi-edu.ma \\
+    \hline
+\end{tabular}
+\end{center}
+
+\section{Responsabilités Partagées}
+
+Dans le cadre de notre organisation collaborative, chaque membre de l'équipe assume les responsabilités suivantes de manière partagée :
+
+\subsection{Activités de Développement}
+
+\begin{itemize}
+    \item \textbf{Développement Backend (Spring Boot) :} Conception et implémentation des API REST, gestion de la persistance des données, mise en place de la sécurité (authentification JWT, autorisation basée sur les rôles).
+    
+    \item \textbf{Développement Mobile (Flutter) :} Création des interfaces utilisateur pour l'application mobile patient, intégration avec les API backend, gestion de l'état de l'application.
+    
+    \item \textbf{Développement Web (Angular) :} Développement des interfaces web pour les patients et le dashboard administrateur, création des composants réutilisables, gestion du routage et des formulaires.
+    
+    \item \textbf{Intégration IA :} Configuration du module Python/Flask pour la communication avec l'API OpenRouter, intégration des fonctionnalités de recommandation dans les applications.
+\end{itemize}
+
+\subsection{Activités de Test et Qualité}
+
+\begin{itemize}
+    \item \textbf{Tests Unitaires :} Rédaction et exécution des tests unitaires avec JUnit 5 et Mockito pour le backend Java. Objectif de couverture : 80\% minimum.
+    
+    \item \textbf{Tests Fonctionnels :} Automatisation des tests fonctionnels avec Selenium WebDriver sur plusieurs navigateurs (Chrome, Firefox, Edge).
+    
+    \item \textbf{Tests de Performance :} Création et exécution des scénarios de test de performance et de stress avec Apache JMeter.
+    
+    \item \textbf{Analyse Qualité :} Exécution régulière des analyses SonarQube, correction des problèmes identifiés (bugs, vulnérabilités, code smells).
+    
+    \item \textbf{Revue de Code :} Participation aux revues de code pour chaque Pull Request, vérification du respect des conventions et de la qualité du code.
+\end{itemize}
+
+\subsection{Activités de Documentation}
+
+\begin{itemize}
+    \item \textbf{Documentation Technique :} Rédaction de la documentation API (Swagger/OpenAPI), documentation du code source (Javadoc, commentaires).
+    
+    \item \textbf{Documentation Projet :} Contribution à la rédaction du Cahier des Charges (CDC) et du Plan d'Assurance Qualité (PAQP).
+    
+    \item \textbf{Rapports de Tests :} Génération et analyse des rapports de tests (JUnit, JaCoCo, JMeter, SonarQube).
+\end{itemize}
+
+\section{Encadrement Pédagogique}
+
+Le projet est encadré par les enseignants responsables des différentes matières impliquées :
+
+\begin{itemize}
+    \item \textbf{Management de la Qualité :} Supervision de la démarche qualité, validation du PAQP, évaluation des métriques qualité atteintes.
+    
+    \item \textbf{Développement Multiplateforme :} Accompagnement sur le développement Flutter, validation de l'application mobile.
+    
+    \item \textbf{JEE2 :} Encadrement du développement backend Spring Boot, validation de l'architecture technique et validation de l'application web.
+    
+    \item \textbf{PFA :} Coordination globale du projet, évaluation finale de l’ntégration d’intelligence artificielle.
+\end{itemize}
+
+\newpage
+
+%==============================================================================
+% CHAPITRE 3 : PLANNING DU PROJET
+%==============================================================================
+\chapter{Planning du Projet}
+
+\section{Durée et Période du Projet}
+
+Le projet Serenity se déroule sur une période de huit semaines, correspondant au semestre académique. Les dates clés sont les suivantes :
+
+\begin{itemize}
+    \item \textbf{Date de début du projet :} 01 Novembre 2025
+    \item \textbf{Date de fin du projet :} 22 Décembre 2025
+    \item \textbf{Durée totale :} 8 semaines (52 jours calendaires)
+\end{itemize}
+
+Cette période inclut l'ensemble des activités : analyse, conception, développement, tests, documentation et préparation de la présentation finale.
+
+\section{Découpage en Phases}
+
+Le projet est découpé en six phases principales, chacune avec des objectifs et des livrables spécifiques. Ce découpage permet un suivi rigoureux de l'avancement et facilite l'identification précoce des éventuels retards ou problèmes.
+
+\subsection{Phase 1 : Initialisation (01/11/2025 - 07/11/2025)}
+
+Cette phase de démarrage permet de poser les fondations du projet.
+
+\textbf{Activités principales :}
+\begin{itemize}
+    \item Analyse des besoins et définition du périmètre fonctionnel
+    \item Rédaction du Cahier des Charges (CDC)
+    \item Élaboration du Plan d'Assurance Qualité Projet (PAQP)
+    \item Définition de l'architecture technique globale
+    \item Mise en place de l'environnement de développement (IDE, Git, Docker)
+    \item Configuration du projet Spring Boot et de la base de données PostgreSQL
+\end{itemize}
+
+\textbf{Livrables :} CDC, PAQP, Architecture technique validée, Environnement de développement opérationnel.
+
+\subsection{Phase 2 : Développement Core (08/11/2025 - 21/11/2025)}
+
+Cette phase se concentre sur le développement des fonctionnalités fondamentales du backend.
+
+\textbf{Activités principales :}
+\begin{itemize}
+    \item Implémentation du modèle de données et des entités JPA
+    \item Développement du système d'authentification et d'autorisation (JWT, Spring Security)
+    \item Création des API REST pour la gestion des utilisateurs
+    \item Mise en place des tests unitaires pour les composants développés
+    \item Configuration de SonarQube et première analyse de qualité
+\end{itemize}
+
+\textbf{Livrables :} API d'authentification fonctionnelle, Module de gestion des utilisateurs, Premiers rapports SonarQube.
+
+\subsection{Phase 3 : Développement Métier (22/11/2025 - 05/12/2025)}
+
+Cette phase couvre l'implémentation de la logique métier spécifique à l'application.
+
+\textbf{Activités principales :}
+\begin{itemize}
+    \item Développement des API pour les tests psychométriques (MMAS-8, PHQ-9, GAD-7, BMQ)
+    \item Implémentation des algorithmes de calcul des scores
+    \item Développement du modèle de prédiction d'adhésion
+    \item Intégration du module IA (Flask + OpenRouter) pour les recommandations
+    \item Développement des API de suivi des prises de médicaments
+    \item Tests unitaires et d'intégration pour les nouvelles fonctionnalités
+\end{itemize}
+
+\textbf{Livrables :} API des tests psychométriques, Module de prédiction, Intégration IA opérationnelle.
+
+\subsection{Phase 4 : Développement Frontend (06/12/2025 - 14/12/2025)}
+
+Cette phase se concentre sur le développement des interfaces utilisateur.
+
+\textbf{Activités principales :}
+\begin{itemize}
+    \item Développement de l'application mobile Flutter (interfaces patient)
+    \item Développement de l'application web Angular pour les patients
+    \item Développement du dashboard administrateur Angular
+    \item Intégration des frontends avec les API backend
+    \item Tests d'intégration frontend-backend
+\end{itemize}
+
+\textbf{Livrables :} Application mobile Flutter fonctionnelle, Applications web Angular opérationnelles, Dashboard administrateur.
+
+\subsection{Phase 5 : Tests et Qualité (15/12/2025 - 20/12/2025)}
+
+Cette phase est dédiée à la validation de la qualité globale de l'application.
+
+\textbf{Activités principales :}
+\begin{itemize}
+    \item Exécution complète des tests unitaires et vérification de la couverture (objectif 80\%)
+    \item Exécution des tests fonctionnels automatisés Selenium sur Chrome, Firefox et Edge
+    \item Exécution des scénarios de test de performance et de stress avec JMeter
+    \item Analyse finale SonarQube et correction des problèmes résiduels
+    \item Génération des rapports de tests et documentation des résultats
+    \item Correction des bugs identifiés lors des tests
+\end{itemize}
+
+\textbf{Livrables :} Rapports de tests JUnit/JaCoCo, Rapports Selenium, Rapports JMeter, Rapport SonarQube final.
+
+\subsection{Phase 6 : Finalisation (21/12/2025 - 22/12/2025)}
+
+Cette phase conclut le projet avec la documentation finale et la préparation de la livraison.
+
+\textbf{Activités principales :}
+\begin{itemize}
+    \item Finalisation de la documentation technique
+    \item Mise à jour du PAQP avec les résultats finaux
+    \item Préparation du support de présentation
+    \item Vérification finale du déploiement Docker
+    \item Présentation du projet devant le jury
+\end{itemize}
+
+\textbf{Livrables :} Documentation finale, PAQP v1.0, Support de présentation, Application déployée.
+
+\section{Étapes clés du Projet}
+
+Les jalons suivants constituent les points de contrôle majeurs du projet :
+
+\begin{center}
+\begin{tabular}{|l|l|l|}
+    \hline
+    \textbf{Date} & \textbf{Jalon} & \textbf{Critère de validation} \\
+    \hline
+    07/11/2025 & Documentation initiale & CDC et PAQP validés par l'équipe \\
+    \hline
+    21/11/2025 & Backend Core & API authentification opérationnelle \\
+    \hline
+    05/12/2025 & Logique Métier & Tests psychométriques fonctionnels \\
+    \hline
+    14/12/2025 & Frontend Complet & Applications Flutter et Angular intégrées \\
+    \hline
+    20/12/2025 & Qualité Validée & Tous les critères qualité atteints \\
+    \hline
+    22/12/2025 & Livraison Finale & Présentation et démonstration \\
+    \hline
+\end{tabular}
+\end{center}
+
+\newpage
+
+%==============================================================================
+% CHAPITRE 4 : REVUES ET RÉUNIONS
+%==============================================================================
+\chapter{Revues et Réunions}
+
+\section{Objectif des Revues}
+
+Les revues et réunions constituent un élément essentiel de notre démarche d'assurance qualité. Elles permettent de vérifier l'avancement du projet, de valider les livrables produits, d'identifier les problèmes potentiels et de prendre les décisions nécessaires pour garantir le succès du projet.
+
+Dans le cadre de notre projet académique, nous avons mis en place plusieurs types de revues adaptés à notre contexte et à la durée du projet.
+
+\section{Types de Revues}
+
+\subsection{Kick-off Meeting (Réunion de Lancement)}
+
+La réunion de lancement s'est tenue le \textbf{01 Novembre 2025} avec l'ensemble de l'équipe projet et l'encadrant pédagogique. Cette réunion inaugurale a permis de :
+
+\begin{itemize}
+    \item Présenter les objectifs du projet et le périmètre fonctionnel
+    \item Valider le planning prévisionnel et les jalons clés
+    \item Définir les rôles et responsabilités de chaque membre
+    \item Établir les canaux de communication (WhatsApp, GitHub, email)
+    \item Présenter les contraintes académiques (dates de rendu, matières impliquées)
+    \item Valider l'environnement technique et les outils à utiliser
+\end{itemize}
+
+\textbf{Participants :} Équipe projet (3 membres), Encadrant pédagogique
+
+\textbf{Livrable :} Compte-rendu de réunion, Planning validé
+
+\subsection{Review Meetings (Réunions de Revue)}
+
+Des réunions de revue sont organisées à chaque fin de phase pour évaluer les livrables produits et décider de la poursuite du projet. Ces réunions suivent un format structuré :
+
+\begin{enumerate}
+    \item \textbf{Présentation des travaux réalisés :} L'équipe présente les développements effectués, les tests réalisés et les résultats obtenus.
+    
+    \item \textbf{Démonstration :} Une démonstration fonctionnelle de l'application est effectuée pour valider les fonctionnalités implémentées.
+    
+    \item \textbf{Analyse des écarts :} Comparaison entre le planning prévu et l'avancement réel, identification des retards éventuels.
+    
+    \item \textbf{Revue qualité :} Présentation des métriques qualité (couverture de tests, résultats SonarQube) et analyse des tendances.
+    
+    \item \textbf{Décision Go/No-Go :} Validation ou non du passage à la phase suivante.
+    
+    \item \textbf{Plan d'actions :} Définition des actions correctives si nécessaire.
+\end{enumerate}
+
+Le calendrier des Review Meetings est le suivant :
+
+\begin{center}
+\begin{tabular}{|l|l|l|}
+    \hline
+    \textbf{Date} & \textbf{Objet de la revue} & \textbf{Livrables à valider} \\
+    \hline
+    08/11/2025 & Revue Phase Initialisation & CDC, PAQP, Architecture \\
+    \hline
+    22/11/2025 & Revue Phase Core & API Auth, Tests unitaires \\
+    \hline
+    06/12/2025 & Revue Phase Métier & Tests psy., Prédiction, IA \\
+    \hline
+    15/12/2025 & Revue Phase Frontend & Apps Flutter et Angular \\
+    \hline
+    21/12/2025 & Revue Qualité Finale & Rapports de tests, Métriques \\
+    \hline
+\end{tabular}
+\end{center}
+
+\subsection{Revues de Code}
+
+Les revues de code constituent une pratique systématique pour garantir la qualité du code produit. Chaque modification de code fait l'objet d'une revue avant son intégration dans la branche principale.
+
+\textbf{Processus de revue de code :}
+
+\begin{enumerate}
+    \item Le développeur crée une Pull Request (PR) sur GitHub avec une description claire des modifications
+    \item Un autre membre de l'équipe est assigné comme reviewer
+    \item Le reviewer vérifie :
+    \begin{itemize}
+        \item Le respect des conventions de codage définies
+        \item La présence et la qualité des tests unitaires
+        \item L'absence de régression sur les fonctionnalités existantes
+        \item La clarté et la maintenabilité du code
+        \item L'absence de problèmes de sécurité évidents
+    \end{itemize}
+    \item Le reviewer approuve la PR ou demande des modifications
+    \item Une fois approuvée, la PR est fusionnée dans la branche principale
+\end{enumerate}
+
+\textbf{Critères de validation d'une Pull Request :}
+\begin{itemize}
+    \item Tous les tests automatisés passent (CI verte)
+    \item La couverture de code n'a pas diminué
+    \item Aucun nouveau problème critique détecté par SonarQube
+    \item Au moins un reviewer a approuvé les modifications
+\end{itemize}
+
+\subsection{Réunions d'Équipe Hebdomadaires}
+
+En plus des revues formelles, l'équipe se réunit de manière informelle chaque semaine pour synchroniser les travaux et résoudre les problèmes quotidiens.
+
+\textbf{Format des réunions hebdomadaires :}
+\begin{itemize}
+    \item \textbf{Durée :} 30 minutes à 1 heure
+    \item \textbf{Fréquence :} Une fois par semaine (le lundi)
+    \item \textbf{Contenu :} Tour de table sur l'avancement de chacun, identification des blocages, répartition des tâches de la semaine
+\end{itemize}
+
+\newpage
+
+%==============================================================================
+% CHAPITRE 5 : GESTION DOCUMENTAIRE
+%==============================================================================
+\chapter{Gestion Documentaire}
+
+\section{Objectif de la Gestion Documentaire}
+
+La gestion documentaire vise à assurer la traçabilité, la cohérence et l'accessibilité de l'ensemble des documents produits ou utilisés dans le cadre du projet. Une bonne gestion documentaire permet de :
+
+\begin{itemize}
+    \item Garantir que tous les membres de l'équipe disposent des informations à jour
+    \item Assurer la traçabilité des décisions et des modifications
+    \item Faciliter la transmission des connaissances
+    \item Permettre l'évaluation du projet par les parties prenantes
+\end{itemize}
+
+\section{Documents d'Entrée (Input)}
+
+Les documents d'entrée sont les documents de référence qui ont servi de base à la réalisation du projet. Dans notre cas, le principal document d'entrée est le \textbf{Cahier des Charges (CDC)} qui définit les exigences fonctionnelles et non fonctionnelles de l'application.
+
+\begin{center}
+\begin{tabular}{|l|l|l|}
+    \hline
+    \textbf{Document} & \textbf{Description} & \textbf{Source} \\
+    \hline
+    Cahier des Charges & Exigences fonctionnelles et techniques & Équipe projet \\
+    \hline
+    Sujet du projet & Consignes académiques & Encadrants EMSI \\
+    \hline
+    Documentation Spring Boot & Référence technique backend & spring.io \\
+    \hline
+    Documentation Flutter & Référence technique mobile & flutter.dev \\
+    \hline
+    Documentation Angular & Référence technique web & angular.io \\
+    \hline
+\end{tabular}
+\end{center}
+
+\section{Documents Produits (Output)}
+
+Les documents suivants sont produits dans le cadre du projet :
+
+\begin{center}
+\begin{tabular}{|l|l|}
+    \hline
+    \textbf{Référence} & \textbf{Document} \\
+    \hline
+    CDC-001 & Cahier des Charges\\
+    \hline
+    PAQP-001 & Plan d'Assurance Qualité Projet \\
+    \hline
+    API-001 & Documentation API Swagger \\
+    \hline
+    RPT-JUNIT & Rapports de tests unitaires \\
+    \hline
+    RPT-JACOCO & Rapports de couverture de code \\
+    \hline
+    RPT-SELENIUM & Rapports de tests fonctionnels \\
+    \hline
+    RPT-JMETER & Rapports de tests de performance \\
+    \hline
+    RPT-SONAR & Rapports d'analyse SonarQube \\
+    \hline
+\end{tabular}
+\end{center}
+
+\section{Règles de Gestion des Documents}
+
+\subsection{Convention de Nommage}
+
+Tous les documents du projet suivent une convention de nommage standardisée pour faciliter leur identification et leur classement :
+
+\textbf{Format :} \texttt{[TYPE]-[NOM]-v[VERSION].[EXTENSION]}
+
+\textbf{Exemples :}
+\begin{itemize}
+    \item \texttt{CDC-AdhesionApp-v1.0.pdf} : Cahier des Charges version 1.0
+    \item \texttt{PAQP-AdhesionApp-v1.0.pdf} : Plan d'Assurance Qualité version 1.0
+    \item \texttt{RPT-JMeter-Performance-v1.0.html} : Rapport de performance JMeter
+\end{itemize}
+
+\subsection{Gestion des Versions}
+
+La numérotation des versions suit le schéma \texttt{X.Y} où :
+\begin{itemize}
+    \item \textbf{X (version majeure) :} Incrémenté lors de modifications substantielles du document
+    \item \textbf{Y (version mineure) :} Incrémenté lors de corrections ou ajouts mineurs
+\end{itemize}
+
+\textbf{Règles de versionnage :}
+\begin{itemize}
+    \item \textbf{0.x :} Versions de travail (brouillon, en cours de rédaction)
+    \item \textbf{1.0 :} Première version validée et diffusée
+    \item \textbf{1.x :} Révisions mineures après validation initiale
+\end{itemize}
+
+\subsection{Stockage et Accessibilité}
+
+L'ensemble des documents et du code source est stocké de manière centralisée pour garantir l'accessibilité à tous les membres de l'équipe :
+
+\begin{itemize}
+    \item \textbf{Code source :} Dépôt Git hébergé sur GitHub, avec gestion des branches (develop, feature/*)
+    
+    \item \textbf{Documentation projet :} Stockée dans le dossier \texttt{/docs} du dépôt Git
+    
+    \item \textbf{Rapports de tests :} Générés automatiquement et stockés dans le dossier \texttt{/reports}
+    
+    \item \textbf{Fichiers de configuration :} Versionnés dans le dépôt Git (docker-compose.yml, pom.xml, etc.)
+\end{itemize}
+
+\newpage
+
+%==============================================================================
+% CHAPITRE 6 : CRITÈRES ET MÉTRIQUES DE QUALITÉ
+%==============================================================================
+\chapter{Critères et Métriques de Qualité}
+
+\section{Objectifs Qualité du Projet}
+
+Ce chapitre définit les critères et métriques de qualité que nous cherchons à atteindre pour valider la qualité de l'application Serenity. Ces objectifs sont alignés avec les exigences du livrable académique et les bonnes pratiques de l'industrie du développement logiciel.
+
+Les objectifs qualité sont répartis en plusieurs catégories : couverture de tests, qualité du code, performance et conformité fonctionnelle.
+
+\section{Métriques de Couverture de Tests}
+
+La couverture de tests est un indicateur clé de la qualité du code. Elle mesure le pourcentage de code source exécuté lors de l'exécution des tests automatisés.
+
+\begin{center}
+\begin{tabular}{|l|l|l|}
+    \hline
+    \textbf{Métrique} & \textbf{Objectif} & \textbf{Criticité} \\
+    \hline
+    Couverture de code (Backend Java) & $\geq$ 80\% & Bloquant \\
+    \hline
+    Couverture des branches & $\geq$ 70\% & Important \\
+    \hline
+    Scénarios fonctionnels critiques & 100\% couverts & Bloquant \\
+    \hline
+    Endpoints API testés & 100\% & Important \\
+    \hline
+\end{tabular}
+\end{center}
+
+\textbf{Justification de l'objectif de 80\% :} Cet objectif est conforme aux exigences du livrable académique qui stipule que les tests unitaires doivent garantir une couverture d'au moins 80\% du code. Ce seuil représente un bon équilibre entre effort de test et garantie de qualité.
+
+\section{Métriques de Qualité du Code (SonarQube)}
+
+L'analyse statique du code avec SonarQube permet d'identifier les problèmes de qualité avant qu'ils n'impactent le fonctionnement de l'application. Les seuils suivants constituent notre Quality Gate :
+
+\begin{center}
+\begin{tabular}{|l|l|l|}
+    \hline
+    \textbf{Métrique SonarQube} & \textbf{Seuil acceptable} & \textbf{Criticité} \\
+    \hline
+    Bugs critiques (Critical) & 0 & Bloquant \\
+    \hline
+    Bugs majeurs (Major) & $\leq$ 10 & Important \\
+    \hline
+    Vulnérabilités critiques & 0 & Bloquant \\
+    \hline
+    Vulnérabilités hautes & 0 & Bloquant \\
+    \hline
+    Code Smells & $\leq$ 100 & Recommandé \\
+    \hline
+    Duplication de code & $\leq$ 5\% & Important \\
+    \hline
+    Reliability Rating & A & Bloquant \\
+    \hline
+    Security Rating & A & Bloquant \\
+    \hline
+    Maintainability Rating & A ou B & Important \\
+    \hline
+\end{tabular}
+\end{center}
+
+\textbf{Interprétation des Ratings SonarQube :}
+\begin{itemize}
+    \item \textbf{A :} Excellent - Aucun problème critique
+    \item \textbf{B :} Bon - Problèmes mineurs uniquement
+    \item \textbf{C :} Acceptable - Quelques problèmes à corriger
+    \item \textbf{D :} Mauvais - Problèmes significatifs
+    \item \textbf{E :} Critique - Problèmes graves nécessitant une action immédiate
+\end{itemize}
+
+\section{Métriques de Performance}
+
+Les tests de performance avec JMeter permettent de valider que l'application répond aux exigences de temps de réponse et de capacité.
+
+\begin{center}
+\begin{tabular}{|l|l|l|}
+    \hline
+    \textbf{Métrique de Performance} & \textbf{Objectif} & \textbf{Criticité} \\
+    \hline
+    Temps de réponse moyen & $\leq$ 500 ms & Important \\
+    \hline
+    Temps de réponse 95e percentile & $\leq$ 1000 ms & Important \\
+    \hline
+    Utilisateurs simultanés supportés & $\geq$ 100 & Important \\
+    \hline
+    Taux d'erreur sous charge normale & $\leq$ 1\% & Bloquant \\
+    \hline
+    Débit (throughput) & $\geq$ 50 req/s & Recommandé \\
+    \hline
+\end{tabular}
+\end{center}
+
+\section{Critères d'Acceptation Fonctionnels}
+
+Au-delà des métriques techniques, les critères suivants doivent être satisfaits pour valider la conformité fonctionnelle de l'application :
+
+\begin{itemize}
+    \item \textbf{Tests psychométriques :} Les quatre tests (MMAS-8, PHQ-9, GAD-7, BMQ) sont implémentés et calculent les scores conformément aux grilles de scoring validées cliniquement.
+    
+    \item \textbf{Prédiction d'adhésion :} Le modèle de prédiction retourne un score cohérent basé sur les résultats des tests psychométriques.
+    
+    \item \textbf{Authentification :} Le système d'authentification fonctionne correctement (inscription, connexion, déconnexion, gestion des sessions JWT).
+    
+    \item \textbf{Multi-plateforme :} L'application est accessible via mobile (Flutter), web patient (Angular) et web administrateur (Angular).
+    
+    \item \textbf{Recommandations IA :} Le module d'IA génère des recommandations personnalisées pertinentes.
+\end{itemize}
+
+\section{Critères d'Acceptation Non Fonctionnels}
+
+\begin{itemize}
+    \item \textbf{Sécurité :} Les mots de passe sont hashés avec BCrypt, les données sensibles ne sont pas exposées dans les logs ou les réponses API.
+    
+    \item \textbf{Compatibilité navigateurs :} L'application web est testée et fonctionne sur Chrome, Firefox et Edge (dernières versions stables).
+    
+    \item \textbf{Déployabilité :} L'application peut être déployée via Docker Compose en une seule commande.
+    
+    \item \textbf{Documentation API :} Tous les endpoints sont documentés via Swagger/OpenAPI.
+\end{itemize}
+
+\newpage
+
+%==============================================================================
+% CHAPITRE 7 : STRATÉGIE DE TESTS
+%==============================================================================
+\chapter{Stratégie de Tests}
+
+\section{Vue d'Ensemble de la Stratégie}
+
+La stratégie de tests mise en place pour le projet Serenity repose sur une approche multi-niveaux qui combine différents types de tests pour garantir la qualité à tous les niveaux de l'application. Cette approche est conforme aux exigences du livrable académique qui impose l'utilisation de JUnit, Selenium, JMeter et SonarQube.
+
+Notre stratégie comprend quatre types de tests complémentaires :
+\begin{enumerate}
+    \item \textbf{Tests Unitaires} avec JUnit 5 et Mockito
+    \item \textbf{Tests Fonctionnels Automatisés} avec Selenium WebDriver
+    \item \textbf{Tests de Performance et de Stress} avec Apache JMeter
+    \item \textbf{Analyse Statique de Qualité} avec SonarQube
+\end{enumerate}
+
+\section{Tests Unitaires (JUnit 5 + Mockito)}
+
+\subsection{Objectifs}
+
+Les tests unitaires visent à vérifier le bon fonctionnement de chaque composant du backend de manière isolée. L'objectif principal est de garantir que chaque unité de code (méthode, classe) fonctionne correctement indépendamment des autres composants.
+
+Conformément aux exigences du livrable, nous visons une \textbf{couverture de code d'au moins 80\%}.
+
+\subsection{Outils Utilisés}
+
+\begin{itemize}
+    \item \textbf{JUnit 5 :} Framework de test unitaire standard pour Java. JUnit 5 apporte des fonctionnalités modernes comme les tests paramétrés, les nested tests et une meilleure gestion des assertions.
+    
+    \item \textbf{Mockito :} Framework de mocking qui permet de simuler le comportement des dépendances externes (repositories, services tiers) pour isoler les tests.
+
+    
+    \item \textbf{JaCoCo :} Outil de mesure de la couverture de code, intégré à Maven pour générer les rapports de couverture.
+\end{itemize}
+
+\subsection{Périmètre des Tests Unitaires}
+
+Les tests unitaires couvrent les composants suivants du backend Spring Boot :
+
+\begin{itemize}
+    \item \textbf{Services métier :} 
+    \begin{itemize}
+        \item AdherencePredictionService : Calcul des scores de prédiction
+        \item ProfileService : Gestion des profils psychométriques
+        \item TestScoringService : Calcul des scores des tests (MMAS-8, PHQ-9, GAD-7, BMQ)
+        \item UserService : Gestion des utilisateurs
+        \item DoseService : Gestion des prises de médicaments
+    \end{itemize}
+    
+    \item \textbf{Controllers REST :}
+    \begin{itemize}
+        \item AuthController : Authentification et inscription
+        \item TestController : Gestion des tests psychométriques
+        \item DoseController : Gestion des doses
+        \item ProfileController : Gestion des profils
+    \end{itemize}
+    
+    \item \textbf{Repositories :} Tests d'intégration avec Testcontainers pour valider les requêtes personnalisées.
+    
+    \item \textbf{Utilitaires :} Helpers, Validators, Mappers DTO-Entity.
+\end{itemize}
+
+\subsection{Exécution et Automatisation}
+
+Les tests unitaires sont intégrés dans le cycle de développement de la manière suivante :
+
+\begin{itemize}
+    \item \textbf{Exécution locale :} Commande \texttt{mvn test} pour exécuter tous les tests
+    \item \textbf{Exécution CI :} Les tests sont exécutés automatiquement à chaque push sur GitHub
+    \item \textbf{Rapport de couverture :} Généré par JaCoCo dans \texttt{target/site/jacoco/}
+    \item \textbf{Critère de blocage :} Le build échoue si la couverture est inférieure à 80\%
+\end{itemize}
+
+\section{Tests Fonctionnels Automatisés (Selenium)}
+
+\subsection{Objectifs}
+
+Les tests fonctionnels automatisés avec Selenium WebDriver visent à valider le comportement de l'application web du point de vue de l'utilisateur final. Ces tests simulent les interactions réelles d'un utilisateur avec l'interface et vérifient que les parcours utilisateur fonctionnent correctement.
+
+Conformément aux exigences du livrable, les tests Selenium sont exécutés sur \textbf{plusieurs navigateurs} : Chrome, Firefox et Edge.
+
+\subsection{Outils Utilisés}
+
+\begin{itemize}
+    \item \textbf{Selenium WebDriver :} API permettant de contrôler un navigateur web de manière programmatique.
+    
+    \item \textbf{WebDriverManager :} Gestionnaire automatique des drivers de navigateurs (ChromeDriver, GeckoDriver, EdgeDriver).
+    
+    \item \textbf{JUnit 5 :} Framework d'exécution des tests Selenium.
+    
+    \item \textbf{Page Object Model :} Pattern de conception utilisé pour structurer les tests et améliorer leur maintenabilité.
+\end{itemize}
+
+\subsection{Scénarios de Test}
+
+Les scénarios fonctionnels suivants sont automatisés avec Selenium :
+
+\begin{enumerate}
+    \item \textbf{SC-01 : Inscription d'un nouveau patient}
+    \begin{itemize}
+        \item Navigation vers la page d'inscription
+        \item Saisie des informations (nom, email, mot de passe)
+        \item Validation du formulaire
+        \item Vérification de la redirection vers le dashboard
+    \end{itemize}
+    
+    \item \textbf{SC-02 : Connexion d'un patient existant}
+    \begin{itemize}
+        \item Navigation vers la page de connexion
+        \item Saisie des identifiants valides
+        \item Vérification de l'accès au dashboard patient
+    \end{itemize}
+    
+    \item \textbf{SC-03 : Connexion avec identifiants invalides}
+    \begin{itemize}
+        \item Tentative de connexion avec un mauvais mot de passe
+        \item Vérification de l'affichage du message d'erreur
+    \end{itemize}
+    
+    \item \textbf{SC-04 : Passage d'un test psychométrique}
+    \begin{itemize}
+        \item Sélection d'un test (ex: PHQ-9)
+        \item Réponse à toutes les questions
+        \item Soumission du test
+        \item Vérification de l'affichage du score
+    \end{itemize}
+    
+    \item \textbf{SC-05 : Consultation du profil et de la prédiction}
+    \begin{itemize}
+        \item Navigation vers la page profil
+        \item Vérification de l'affichage des résultats des tests
+        \item Vérification de l'affichage du score de prédiction d'adhésion
+    \end{itemize}
+    
+    \item \textbf{SC-06 : Marquage d'une dose}
+    \begin{itemize}
+        \item Navigation vers la page des médicaments
+        \item Marquage d'une dose comme prise
+        \item Vérification de la mise à jour de l'interface
+    \end{itemize}
+    
+    \item \textbf{SC-07 : Dashboard administrateur}
+    \begin{itemize}
+        \item Connexion en tant qu'administrateur
+        \item Vérification de l'accès aux fonctionnalités d'administration
+        \item Navigation dans les différentes sections
+    \end{itemize}
+    
+    \item \textbf{SC-08 : Déconnexion}
+    \begin{itemize}
+        \item Clic sur le bouton de déconnexion
+        \item Vérification de la redirection vers la page de connexion
+        \item Vérification de l'impossibilité d'accéder aux pages protégées
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Configuration Multi-Navigateurs}
+
+Les tests Selenium sont configurés pour s'exécuter sur trois navigateurs :
+
+\begin{center}
+\begin{tabular}{|l|l|l|}
+    \hline
+    \textbf{Navigateur} & \textbf{Version} & \textbf{Driver} \\
+    \hline
+    Google Chrome & Dernière stable & ChromeDriver (auto) \\
+    \hline
+    Mozilla Firefox & Dernière stable & GeckoDriver (auto) \\
+    \hline
+    Microsoft Edge & Dernière stable & EdgeDriver (auto) \\
+    \hline
+\end{tabular}
+\end{center}
+
+\section{Tests de Performance et de Stress (JMeter)}
+
+\subsection{Objectifs}
+
+Les tests de performance avec Apache JMeter visent à évaluer le comportement de l'application sous charge et à identifier les éventuels goulots d'étranglement. Conformément aux exigences du livrable, nous créons une \textbf{documentation complète} des scénarios de test, des résultats et des recommandations.
+
+\subsection{Outils Utilisés}
+
+\begin{itemize}
+    \item \textbf{Apache JMeter :} Outil de test de charge permettant de simuler de nombreux utilisateurs simultanés.
+    
+    \item \textbf{JMeter Plugins :} Extensions pour des rapports avancés et des graphiques détaillés.
+    
+    \item \textbf{JMeter HTML Report :} Génération automatique de rapports HTML détaillés.
+\end{itemize}
+
+\subsection{Scénarios de Test de Performance}
+
+Les scénarios suivants sont implémentés dans JMeter (fichiers \texttt{.jmx} disponibles dans le dossier \texttt{/jmeter}) :
+
+\begin{center}
+\begin{tabular}{|l|l|l|l|}
+    \hline
+    \textbf{ID} & \textbf{Scénario} & \textbf{Utilisateurs} & \textbf{Durée} \\
+    \hline
+    PERF-01 & Authentification (login) & 50 & 5 min \\
+    \hline
+    PERF-02 & Liste des tests disponibles & 100 & 5 min \\
+    \hline
+    PERF-03 & Soumission réponses de test & 50 & 10 min \\
+    \hline
+    PERF-04 & Génération de prédiction & 100 & 5 min \\
+    \hline
+    PERF-05 & Récupération doses du jour & 100 & 5 min \\
+    \hline
+    STRESS-01 & Test de charge maximale & 200 & 15 min \\
+    \hline
+\end{tabular}
+\end{center}
+
+\subsection{Documentation des Résultats JMeter}
+
+Conformément aux exigences du livrable, la documentation JMeter comprend :
+
+\begin{enumerate}
+    \item \textbf{Description des scénarios :} Objectif de chaque test, configuration, paramètres utilisés
+    
+    \item \textbf{Résultats bruts :} Fichiers JTL exportés contenant toutes les métriques
+    
+    \item \textbf{Rapports HTML :} Graphiques et tableaux de synthèse générés automatiquement
+    
+    \item \textbf{Analyse et interprétation :} Explication des résultats, identification des points faibles
+    
+    \item \textbf{Recommandations :} Actions d'optimisation suggérées si nécessaire
+\end{enumerate}
+
+Les rapports sont générés dans le dossier \texttt{/results} avec la commande :
+
+\texttt{jmeter -n -t test.jmx -l results.jtl -e -o report/}
+
+\section{Analyse Statique de Qualité (SonarQube)}
+
+\subsection{Objectifs}
+
+SonarQube est utilisé pour effectuer une analyse statique continue du code source. L'objectif est d'identifier les problèmes de qualité (bugs, vulnérabilités, code smells) avant qu'ils n'impactent le fonctionnement de l'application.
+
+\subsection{Configuration SonarQube}
+
+\begin{itemize}
+    \item \textbf{Serveur :} Instance SonarQube locale (Docker) ou SonarCloud
+    \item \textbf{Scanner :} SonarScanner Maven intégré au pom.xml
+    \item \textbf{Quality Gate :} Personnalisée selon les seuils définis au chapitre 6
+\end{itemize}
+
+\subsection{Règles Analysées}
+
+SonarQube analyse le code selon plusieurs catégories :
+
+\begin{itemize}
+    \item \textbf{Bugs :} Problèmes qui peuvent causer un comportement incorrect de l'application
+    \item \textbf{Vulnerabilities :} Failles de sécurité potentielles
+    \item \textbf{Code Smells :} Problèmes de maintenabilité du code
+    \item \textbf{Security Hotspots :} Points sensibles nécessitant une revue manuelle
+    \item \textbf{Duplications :} Code dupliqué à factoriser
+\end{itemize}
+
+\subsection{Intégration CI/CD}
+
+L'analyse SonarQube est intégrée dans le processus de développement :
+
+\begin{enumerate}
+    \item Exécution automatique après chaque build Maven : \texttt{mvn sonar:sonar}
+    \item Analyse des résultats sur l'interface web SonarQube
+    \item Blocage du merge si la Quality Gate n'est pas passée
+    \item Correction obligatoire des problèmes critiques et bloquants
+\end{enumerate}
+
+\newpage
+
+%==============================================================================
+% CHAPITRE 8 : NORMES ET CONVENTIONS DE CODAGE
+%==============================================================================
+\chapter{Normes et Conventions de Codage}
+
+\section{Objectif des Conventions}
+
+Les conventions de codage définissent les règles de style et de structure que tous les membres de l'équipe doivent respecter lors de l'écriture du code. Ces conventions permettent de :
+
+\begin{itemize}
+    \item Améliorer la lisibilité et la compréhension du code
+    \item Faciliter la maintenance et l'évolution de l'application
+    \item Réduire les erreurs liées à des pratiques inconsistantes
+    \item Simplifier les revues de code
+\end{itemize}
+
+\section{Conventions Java (Backend Spring Boot)}
+
+Le code Java du backend suit les conventions du \textbf{Google Java Style Guide} avec les règles suivantes :
+
+\subsection{Formatage}
+
+\begin{itemize}
+    \item \textbf{Indentation :} 4 espaces (pas de tabulations)
+    \item \textbf{Longueur de ligne :} Maximum 120 caractères
+    \item \textbf{Accolades :} Style K\&R (accolade ouvrante sur la même ligne)
+    \item \textbf{Espaces :} Après les mots-clés (if, for, while), autour des opérateurs
+\end{itemize}
+
+\subsection{Nommage}
+
+\begin{itemize}
+    \item \textbf{Classes :} PascalCase (ex: UserService, TestController)
+    \item \textbf{Méthodes :} camelCase (ex: calculateScore(), findByUserId())
+    \item \textbf{Variables :} camelCase (ex: userName, totalScore)
+    \item \textbf{Constantes :} SCREAMING\_SNAKE\_CASE (ex: MAX\_RETRY\_COUNT)
+    \item \textbf{Packages :} lowercase (ex: com.projet.adhesionapp.service)
+\end{itemize}
+
+\subsection{Documentation}
+
+\begin{itemize}
+    \item \textbf{Javadoc :} Obligatoire pour toutes les classes et méthodes publiques
+    \item \textbf{Commentaires :} En français, clairs et concis, pour expliquer la logique complexe
+\end{itemize}
+
+\section{Conventions Dart (Application Flutter)}
+
+Le code Dart de l'application mobile suit les conventions \textbf{Effective Dart} :
+
+\subsection{Formatage}
+
+\begin{itemize}
+    \item \textbf{Indentation :} 2 espaces
+    \item \textbf{Longueur de ligne :} Maximum 80 caractères
+    \item \textbf{Formatage automatique :} Utilisation de \texttt{dart format}
+\end{itemize}
+
+\subsection{Nommage}
+
+\begin{itemize}
+    \item \textbf{Classes :} PascalCase (ex: DashboardScreen, TestWidget)
+    \item \textbf{Fichiers :} snake\_case (ex: dashboard\_screen.dart)
+    \item \textbf{Variables et fonctions :} camelCase
+    \item \textbf{Constantes :} camelCase avec préfixe k (ex: kPrimaryColor)
+\end{itemize}
+
+\section{Conventions TypeScript (Applications Angular)}
+
+Le code TypeScript des applications Angular suit les conventions du \textbf{Angular Style Guide} :
+
+\subsection{Formatage}
+
+\begin{itemize}
+    \item \textbf{Indentation :} 2 espaces
+    \item \textbf{Longueur de ligne :} Maximum 140 caractères
+    \item \textbf{Points-virgules :} Obligatoires
+\end{itemize}
+
+\subsection{Nommage}
+
+\begin{itemize}
+    \item \textbf{Composants :} PascalCase (ex: DashboardComponent)
+    \item \textbf{Fichiers :} kebab-case (ex: dashboard.component.ts)
+    \item \textbf{Services :} PascalCase avec suffixe Service (ex: AuthService)
+    \item \textbf{Observables :} Suffixe \$ (ex: users\$, isLoading\$)
+\end{itemize}
+
+\subsection{Typage}
+
+\begin{itemize}
+    \item \textbf{Types explicites :} Éviter l'utilisation de \texttt{any}
+    \item \textbf{Interfaces :} Définir des interfaces pour les modèles de données
+\end{itemize}
+
+\section{Conventions Git}
+
+\subsection{Messages de Commit}
+
+Les messages de commit suivent le format \textbf{Conventional Commits} :
+
+\texttt{<type>(<scope>): <description>}
+
+\textbf{Types autorisés :}
+\begin{itemize}
+    \item \textbf{feat :} Nouvelle fonctionnalité
+    \item \textbf{fix :} Correction de bug
+    \item \textbf{docs :} Modification de documentation
+    \item \textbf{test :} Ajout ou modification de tests
+    \item \textbf{refactor :} Refactoring sans changement fonctionnel
+    \item \textbf{style :} Formatage, mise en forme (pas de changement de code)
+    \item \textbf{chore :} Tâches de maintenance (dépendances, configuration)
+\end{itemize}
+
+\textbf{Exemples :}
+\begin{itemize}
+    \item \texttt{feat(auth): add user registration endpoint}
+    \item \texttt{fix(prediction): correct adherence score calculation}
+    \item \texttt{test(service): add unit tests for ProfileService}
+    \item \texttt{docs(readme): update installation instructions}
+\end{itemize}
+
+\subsection{Stratégie de Branches}
+
+\begin{itemize}
+    \item \textbf{main :} Branche de production, code stable et testé
+    \item \textbf{develop :} Branche d'intégration des développements
+    \item \textbf{feature/* :} Branches pour les nouvelles fonctionnalités
+    \item \textbf{fix/* :} Branches pour les corrections de bugs
+    \item \textbf{release/* :} Branches de préparation des releases
+\end{itemize}
+
+\newpage
+
+%==============================================================================
+% CHAPITRE 9 : GESTION DES NON-CONFORMITÉS
+%==============================================================================
+\chapter{Gestion des Non-Conformités}
+
+\section{Définition d'une Non-Conformité}
+
+Une non-conformité est un écart constaté entre le résultat obtenu et le résultat attendu. Dans le contexte de notre projet, une non-conformité peut être :
+
+\begin{itemize}
+    \item Un \textbf{bug} : Comportement incorrect de l'application
+    \item Un \textbf{écart aux spécifications} : Fonctionnalité non conforme au CDC
+    \item Une \textbf{violation des critères qualité} : Non-respect des seuils définis (couverture, SonarQube)
+    \item Une \textbf{violation des conventions} : Code non conforme aux normes établies
+\end{itemize}
+
+\section{Classification des Non-Conformités}
+
+Les non-conformités sont classées selon leur niveau de gravité :
+
+\begin{center}
+\begin{tabular}{|l|l|l|}
+    \hline
+    \textbf{Niveau} & \textbf{Description} & \textbf{Délai de correction} \\
+    \hline
+    Critique & Bloque le fonctionnement ou faille de sécurité & Immédiat \\
+    \hline
+    Majeure & Fonctionnalité incorrecte, impact significatif & 24-48 heures \\
+    \hline
+    Mineure & Défaut mineur, contournement possible & Sprint suivant \\
+    \hline
+\end{tabular}
+\end{center}
+
+\section{Processus de Traitement}
+
+Le traitement d'une non-conformité suit le processus suivant :
+
+\begin{enumerate}
+    \item \textbf{Détection :} La non-conformité est identifiée via les tests automatisés, les revues de code, l'analyse SonarQube ou les tests manuels.
+    
+    \item \textbf{Enregistrement :} Une issue est créée sur GitHub avec :
+    \begin{itemize}
+        \item Un titre descriptif
+        \item Une description détaillée du problème
+        \item Les étapes pour reproduire (si applicable)
+        \item Le niveau de gravité (label)
+        \item L'assignation à un membre de l'équipe
+    \end{itemize}
+    
+    \item \textbf{Analyse :} Le développeur assigné analyse la cause racine du problème.
+    
+    \item \textbf{Correction :} Le développeur implémente le correctif sur une branche dédiée (fix/*).
+    
+    \item \textbf{Vérification :} La correction est vérifiée par :
+    \begin{itemize}
+        \item L'exécution des tests automatisés
+        \item Une revue de code par un autre membre
+        \item Un test manuel si nécessaire
+    \end{itemize}
+    
+    \item \textbf{Clôture :} L'issue est fermée après validation du correctif.
+\end{enumerate}
+
+\section{Actions Préventives}
+
+Pour minimiser l'apparition de non-conformités, les actions préventives suivantes sont mises en place :
+
+\begin{itemize}
+    \item \textbf{Revue de code systématique :} Chaque modification est revue avant intégration
+    \item \textbf{Tests automatisés :} Exécution à chaque commit pour détecter les régressions
+    \item \textbf{Analyse SonarQube :} Détection proactive des problèmes de qualité
+    \item \textbf{Documentation :} Code documenté pour faciliter la compréhension et la maintenance
+    \item \textbf{Rétrospectives :} Analyse des non-conformités récurrentes pour améliorer les processus
+\end{itemize}
+
+\newpage
+
+%==============================================================================
+% VALIDATION DU DOCUMENT
+%==============================================================================
+\chapter*{Validation du Document}
+\addcontentsline{toc}{chapter}{Validation du Document}
+
+\section*{Engagement de l'Équipe}
+
+Nous, membres de l'équipe projet Serenity (Adhésion-App), nous engageons à respecter l'ensemble des dispositions définies dans le présent Plan d'Assurance Qualité Projet.
+
+Nous nous engageons notamment à :
+\begin{enumerate}
+    \item Respecter les processus et critères de qualité définis
+    \item Contribuer activement à l'amélioration continue de la qualité
+    \item Signaler toute non-conformité identifiée
+    \item Participer aux revues et réunions planifiées
+    \item Maintenir la documentation à jour
+    \item Respecter les normes et conventions de codage établies
+\end{enumerate}
+
+\vspace{2cm}
+
+\section*{Signatures de l'Équipe Projet}
+
+\vspace{1cm}
+
+\begin{center}
+\begin{tabular}{ccc}
+& & \\
+& & \\
+\rule{5cm}{0.4pt} & \rule{5cm}{0.4pt} & \rule{5cm}{0.4pt} \\
+ISSAME Imad & AGOUMI Mohammed Amine & JABRANE Mohamed Yahya \\
+Développeur / Testeur & Développeur / Testeur & Développeur / Testeur \\
+\end{tabular}
+\end{center}
+
+\vspace{2cm}
+
+\section*{Approbation}
+
+\begin{center}
+\begin{tabular}{|l|l|l|}
+    \hline
+    \textbf{Rédaction} & \textbf{Vérification} & \textbf{Approbation} \\
+    \hline
+    & & \\
+    Équipe Projet & ISSAME Imad & M. ESSABAR Driss \\
+    & & \\
+    Date : 01/11/2025 & Date : 15/12/2025 & Date : 18/12/2025 \\
+    & & \\
+    \hline
+\end{tabular}
+\end{center}
+
+\vspace{2cm}
+
+\begin{center}
+\rule{8cm}{0.4pt}
+
+\vspace{0.5cm}
+
+\textit{Document rédigé dans le cadre du projet académique transversal}
+
+\textit{École Marocaine des Sciences de l'Ingénieur (EMSI)}
+
+\textit{Année Universitaire 2025-2026}
+
+\vspace{0.5cm}
+
+\textbf{Référence : PAQP-ADHESION-2025-001}
+
+\textbf{Version : 1.0}
+\end{center}
+
+\end{document}
