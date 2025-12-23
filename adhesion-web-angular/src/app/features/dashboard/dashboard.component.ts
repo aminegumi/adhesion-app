@@ -1,8 +1,9 @@
-import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
+import { interval, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard',
@@ -84,6 +85,10 @@ import { AuthService } from '../../core/services/auth.service';
             <a routerLink="/medications" class="nav-item">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 3h12v2H6zm11 3H7c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-1 9h-2.5v2.5h-3V15H8v-3h2.5V9.5h3V12H16v3z"/></svg>
               <span>Medications</span>
+            </a>
+            <a routerLink="/todays-doses" class="nav-item">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+              <span>Today's Doses</span>
             </a>
             <a routerLink="/history" class="nav-item">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
@@ -689,19 +694,32 @@ import { AuthService } from '../../core/services/auth.service';
     }
   `]
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
   private auth = inject(AuthService);
+  private autoRefreshSub?: Subscription;
 
   userName = signal('User');
   wellnessScore = signal(50);
   testsCompleted = signal(0);
   activePlans = signal(0);
+  totalPlans = signal(0);
   adherenceRate = signal(0);
+  latestPredictionRisk = signal<number | null>(null);
+  loading = signal(true);
+  lastRefresh = signal(new Date());
 
   ngOnInit(): void {
     this.loadUserData();
     this.loadDashboardData();
+    // Auto-refresh every 30 seconds like Flutter
+    this.autoRefreshSub = interval(30000).subscribe(() => {
+      this.loadDashboardData();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.autoRefreshSub?.unsubscribe();
   }
 
   loadUserData(): void {
@@ -713,41 +731,104 @@ export class DashboardComponent implements OnInit {
 
   loadDashboardData(): void {
     const userId = this.auth.getUserId();
-    if (!userId) return;
+    if (!userId) {
+      this.loading.set(false);
+      return;
+    }
+
+    this.loading.set(true);
+    let dataLoaded = 0;
+    const totalDataPoints = 4;
+    const checkComplete = () => {
+      dataLoaded++;
+      if (dataLoaded >= totalDataPoints) {
+        this.loading.set(false);
+        this.lastRefresh.set(new Date());
+        this.calculateWellnessScore();
+      }
+    };
 
     // Load test history
     this.api.getTestHistory(userId).subscribe({
       next: (tests) => {
         this.testsCompleted.set(tests.length);
-        this.calculateWellnessScore(tests.length);
+        checkComplete();
       },
-      error: () => {}
+      error: () => checkComplete()
     });
 
     // Load treatment plans
     this.api.getTreatmentPlans(userId).subscribe({
       next: (plans) => {
+        this.totalPlans.set(plans.length);
         const active = plans.filter(p => p.status === 'ACTIVE').length;
         this.activePlans.set(active);
+        checkComplete();
       },
-      error: () => {}
+      error: () => checkComplete()
     });
 
-    // Load adherence
+    // Load adherence score
     this.api.getAdherenceScore(userId).subscribe({
       next: (score) => {
         this.adherenceRate.set(Math.round(score));
+        checkComplete();
       },
-      error: () => {}
+      error: () => checkComplete()
+    });
+
+    // Load predictions to get latest risk
+    this.api.getPredictions(userId).subscribe({
+      next: (predictions) => {
+        if (predictions.length > 0) {
+          // Sort by date and get latest
+          const sorted = [...predictions].sort((a, b) => 
+            new Date(b.date).getTime() - new Date(a.date).getTime()
+          );
+          this.latestPredictionRisk.set(sorted[0].probNonAdherence * 100);
+        }
+        checkComplete();
+      },
+      error: () => checkComplete()
     });
   }
 
-  calculateWellnessScore(testsCompleted: number): void {
-    let score = 50;
-    if (testsCompleted > 0) {
-      score = Math.min(100, 50 + testsCompleted * 10);
+  calculateWellnessScore(): void {
+    // Calculate wellness score based on multiple factors (matching Flutter logic)
+    let score = 0;
+    let factors = 0;
+
+    // Adherence score contributes
+    const adherence = this.adherenceRate();
+    if (adherence > 0) {
+      score += adherence;
+      factors++;
     }
-    this.wellnessScore.set(score);
+
+    // Prediction risk (inverse) - lower risk = higher wellness
+    const predRisk = this.latestPredictionRisk();
+    if (predRisk !== null) {
+      score += (100 - predRisk);
+      factors++;
+    }
+
+    // Tests completed factor (each test adds value, max at 5)
+    const tests = this.testsCompleted();
+    if (tests > 0) {
+      const testScore = (Math.min(tests, 5) / 5) * 100;
+      score += testScore;
+      factors++;
+    }
+
+    // Active plans factor
+    if (this.activePlans() > 0) {
+      score += 80; // Having active plans is positive
+      factors++;
+    }
+
+    // Calculate average, default to 50 if no data
+    const finalScore = factors > 0 ? Math.round(score / factors) : 50;
+    this.wellnessScore.set(Math.min(100, Math.max(0, finalScore)));
   }
 
   getGreeting(): string {

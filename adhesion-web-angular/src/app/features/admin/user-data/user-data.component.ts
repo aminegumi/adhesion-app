@@ -14,23 +14,64 @@ import { ApiService, User, TestResult, TreatmentPlan } from '../../../core/servi
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
         </a>
         <h1>User Data</h1>
+        <div class="view-toggle">
+          <button class="toggle-btn" [class.active]="showAllUsers()" (click)="toggleShowAll(true)">All Users</button>
+          <button class="toggle-btn" [class.active]="!showAllUsers()" (click)="toggleShowAll(false)">Consented Only</button>
+        </div>
       </header>
 
       <div class="content">
         @if (!selectedUser()) {
           <div class="users-list">
-            @for (user of users(); track user.id) {
-              <div class="user-card" (click)="selectUser(user)">
-                <div class="user-avatar">{{ user.displayName?.charAt(0) || 'U' }}</div>
-                <div class="user-info">
-                  <span class="name">{{ user.displayName }}</span>
-                  <span class="email">{{ user.email }}</span>
-                </div>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z"/></svg>
+            <!-- Consented Users Section -->
+            @if (consentedUsers().length > 0) {
+              <div class="section-header">
+                <span class="section-title">Consented Users</span>
+                <span class="section-count success">{{ consentedUsers().length }}</span>
               </div>
-            } @empty {
+              @for (user of consentedUsers(); track user.id) {
+                <div class="user-card" (click)="selectUser(user)">
+                  <div class="user-avatar consented">{{ user.displayName?.charAt(0) || 'U' }}</div>
+                  <div class="user-info">
+                    <span class="name">{{ user.displayName }}</span>
+                    <span class="email">{{ user.email }}</span>
+                  </div>
+                  @if (user.role === 'ADMIN') {
+                    <span class="consent-badge admin">👑 Admin</span>
+                  } @else {
+                    <span class="consent-badge consented">✓ Consented</span>
+                  }
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z"/></svg>
+                </div>
+              }
+            }
+
+            <!-- Non-Consented Users Section -->
+            @if (showAllUsers() && nonConsentedUsers().length > 0) {
+              <div class="section-header" style="margin-top: 24px;">
+                <span class="section-title">No Consent Given</span>
+                <span class="section-count danger">{{ nonConsentedUsers().length }}</span>
+              </div>
+              @for (user of nonConsentedUsers(); track user.id) {
+                <div class="user-card no-consent" (click)="selectUser(user)">
+                  <div class="user-avatar not-consented">{{ user.displayName?.charAt(0) || 'U' }}</div>
+                  <div class="user-info">
+                    <span class="name">{{ user.displayName }}</span>
+                    <span class="email">{{ user.email }}</span>
+                  </div>
+                  @if (user.role === 'ADMIN') {
+                    <span class="consent-badge admin">👑 Admin</span>
+                  } @else {
+                    <span class="consent-badge not-consented">No Consent</span>
+                  }
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z"/></svg>
+                </div>
+              }
+            }
+
+            @if (consentedUsers().length === 0 && (!showAllUsers() || nonConsentedUsers().length === 0)) {
               <div class="empty-state">
-                <p>No consented users found</p>
+                <p>{{ showAllUsers() ? 'No users found' : 'No consented users found' }}</p>
               </div>
             }
           </div>
@@ -119,10 +160,64 @@ import { ApiService, User, TestResult, TreatmentPlan } from '../../../core/servi
       display: flex; align-items: center; justify-content: center;
       color: var(--primary);
       font-weight: 700;
+      &.consented { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+      &.not-consented { background: rgba(239, 68, 68, 0.2); color: var(--error); }
     }
     .user-info { flex: 1; }
     .name { display: block; color: white; font-weight: 600; }
     .email { color: rgba(255,255,255,0.5); font-size: 13px; }
+    .consent-badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-right: 12px;
+      &.consented { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+      &.not-consented { background: rgba(239, 68, 68, 0.2); color: var(--error); }
+      &.admin { background: rgba(245, 158, 11, 0.2); color: #F59E0B; }
+    }
+    .user-card.no-consent {
+      opacity: 0.7;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      color: rgba(255,255,255,0.7);
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .section-count {
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      &.success { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+      &.danger { background: rgba(239, 68, 68, 0.2); color: var(--error); }
+    }
+    .view-toggle {
+      display: flex;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 4px;
+    }
+    .toggle-btn {
+      padding: 8px 14px;
+      border: none;
+      background: transparent;
+      color: rgba(255,255,255,0.6);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      &.active { background: var(--admin-primary); color: white; }
+      &:hover:not(.active) { color: white; }
+    }
     .back-link {
       background: none; border: none;
       color: rgba(255,255,255,0.6);
@@ -207,16 +302,36 @@ export class UserDataComponent implements OnInit {
   testResults = signal<TestResult[]>([]);
   plans = signal<TreatmentPlan[]>([]);
   activeTab = signal<'tests' | 'plans'>('tests');
+  showAllUsers = signal(true); // Default to show all users
+
+  // Computed signals for filtering users
+  consentedUsers = signal<User[]>([]);
+  nonConsentedUsers = signal<User[]>([]);
 
   ngOnInit(): void {
-    this.api.getConsentedUsers().subscribe(u => this.users.set(u));
+    this.loadUsers();
     const userId = this.route.snapshot.queryParams['userId'];
     if (userId) {
-      this.api.getConsentedUsers().subscribe(users => {
+      this.api.getAllUsers().subscribe(users => {
         const user = users.find(u => u.id === +userId);
         if (user) this.selectUser(user);
       });
     }
+  }
+
+  loadUsers(): void {
+    this.api.getAllUsers().subscribe(allUsers => {
+      // Include ALL users (including admins) for complete visibility
+      this.users.set(allUsers);
+      
+      // Separate consented and non-consented users
+      this.consentedUsers.set(allUsers.filter(u => u.consentGiven));
+      this.nonConsentedUsers.set(allUsers.filter(u => !u.consentGiven));
+    });
+  }
+
+  toggleShowAll(showAll: boolean): void {
+    this.showAllUsers.set(showAll);
   }
 
   selectUser(user: User): void {

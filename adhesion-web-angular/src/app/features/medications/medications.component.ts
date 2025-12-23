@@ -2,13 +2,8 @@ import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { ApiService, Medication, TreatmentPlan } from '../../core/services/api.service';
+import { ApiService, UserMedication, TreatmentPlan, CreateMedicationRequest } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
-
-interface MedicationWithPlan extends Medication {
-  planId?: number;
-  planTitle?: string;
-}
 
 @Component({
   selector: 'app-medications',
@@ -71,7 +66,7 @@ interface MedicationWithPlan extends Medication {
         @if (filteredMedications().length > 0) {
           <div class="medications-list">
             @for (med of filteredMedications(); track med.id) {
-              <div class="medication-card" [class.inactive]="!med.isActive">
+              <div class="medication-card" [class.inactive]="!med.active">
                 <div class="med-icon" [class.chronic]="med.isChronic">
                   💊
                 </div>
@@ -84,20 +79,20 @@ interface MedicationWithPlan extends Medication {
                   </div>
                   <p class="med-dosage">{{ med.dosage }}</p>
                   <div class="med-meta">
-                    <span class="frequency">{{ med.frequency || (med.timesPerDay + 'x daily') }}</span>
-                    @if (med.planTitle) {
-                      <span class="plan-link">• {{ med.planTitle }}</span>
+                    <span class="frequency">{{ med.frequencyPerDay }}x daily</span>
+                    @if (med.instructions) {
+                      <span class="plan-link">• {{ med.instructions }}</span>
                     }
                   </div>
                 </div>
                 <div class="med-actions">
                   <button 
                     class="toggle-btn" 
-                    [class.active]="med.isActive"
+                    [class.active]="med.active"
                     (click)="toggleMedication(med)"
-                    title="{{ med.isActive ? 'Deactivate' : 'Activate' }}"
+                    title="{{ med.active ? 'Deactivate' : 'Activate' }}"
                   >
-                    @if (med.isActive) {
+                    @if (med.active) {
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                     } @else {
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/></svg>
@@ -150,35 +145,39 @@ interface MedicationWithPlan extends Medication {
                   <input type="text" [(ngModel)]="newMed.dosage" placeholder="e.g., 10mg">
                 </div>
                 <div class="form-group">
-                  <label>Frequency</label>
-                  <select [(ngModel)]="newMed.frequency">
-                    <option value="Once daily">Once daily</option>
-                    <option value="Twice daily">Twice daily</option>
-                    <option value="Three times daily">Three times daily</option>
-                    <option value="As needed">As needed</option>
-                    <option value="Weekly">Weekly</option>
+                  <label>Form</label>
+                  <select [(ngModel)]="newMed.form">
+                    @for (f of forms; track f) {
+                      <option [value]="f">{{ f }}</option>
+                    }
                   </select>
                 </div>
               </div>
 
               <div class="form-group">
-                <label>Treatment Plan (Optional)</label>
-                <select [(ngModel)]="newMed.planId">
-                  <option [ngValue]="null">-- No Plan --</option>
-                  @for (plan of plans(); track plan.id) {
-                    <option [ngValue]="plan.id">{{ plan.title }}</option>
+                <label>Scheduled Times</label>
+                <div class="times-grid">
+                  @for (time of commonTimes; track time) {
+                    <label class="time-chip" [class.selected]="newMed.scheduledTimes.includes(time)">
+                      <input type="checkbox" [checked]="newMed.scheduledTimes.includes(time)" (change)="toggleScheduledTime(time)">
+                      {{ time }}
+                    </label>
                   }
-                </select>
+                </div>
               </div>
 
               <div class="form-row checkboxes">
                 <label class="checkbox-label">
-                  <input type="checkbox" [(ngModel)]="newMed.isActive">
+                  <input type="checkbox" [(ngModel)]="newMed.active">
                   <span>Active</span>
                 </label>
                 <label class="checkbox-label">
                   <input type="checkbox" [(ngModel)]="newMed.isChronic">
                   <span>Chronic Medication</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" [(ngModel)]="newMed.remindersEnabled">
+                  <span>Reminders</span>
                 </label>
               </div>
 
@@ -543,6 +542,36 @@ interface MedicationWithPlan extends Medication {
       }
     }
 
+    .times-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .time-chip {
+      display: flex;
+      align-items: center;
+      padding: 8px 14px;
+      background: var(--gray-100);
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+
+      input[type="checkbox"] {
+        display: none;
+      }
+
+      &.selected {
+        background: linear-gradient(135deg, var(--success), #34D399);
+        color: white;
+      }
+
+      &:hover:not(.selected) {
+        background: var(--gray-200);
+      }
+    }
+
     .checkbox-label {
       display: flex;
       align-items: center;
@@ -599,22 +628,29 @@ export class MedicationsComponent implements OnInit {
   private api = inject(ApiService);
   private auth = inject(AuthService);
 
-  medications = signal<MedicationWithPlan[]>([]);
+  medications = signal<UserMedication[]>([]);
   plans = signal<TreatmentPlan[]>([]);
   showAddDialog = signal(false);
-  editingMed = signal<MedicationWithPlan | null>(null);
+  editingMed = signal<UserMedication | null>(null);
   activeFilter = signal<'all' | 'active' | 'chronic'>('all');
   searchQuery = '';
 
   newMed = {
     name: '',
     dosage: '',
-    frequency: 'Once daily',
-    planId: null as number | null,
-    isActive: true,
+    form: 'TABLET',
+    frequencyPerDay: 1,
+    scheduledTimes: ['08:00'] as string[],
+    instructions: '',
     isChronic: false,
-    instructions: ''
+    active: true,
+    remindersEnabled: true,
+    reminderMinutesBefore: 15,
+    notes: ''
   };
+
+  forms = ['TABLET', 'CAPSULE', 'LIQUID', 'INJECTION', 'CREAM', 'DROPS', 'INHALER', 'PATCH', 'OTHER'];
+  commonTimes = ['06:00', '08:00', '12:00', '14:00', '18:00', '20:00', '22:00'];
 
   filteredMedications = computed(() => {
     let meds = this.medications();
@@ -630,7 +666,7 @@ export class MedicationsComponent implements OnInit {
 
     // Apply status filter
     if (this.activeFilter() === 'active') {
-      meds = meds.filter(m => m.isActive);
+      meds = meds.filter(m => m.active);
     } else if (this.activeFilter() === 'chronic') {
       meds = meds.filter(m => m.isChronic);
     }
@@ -638,12 +674,12 @@ export class MedicationsComponent implements OnInit {
     return meds;
   });
 
-  activeMedsCount = computed(() => this.medications().filter(m => m.isActive).length);
+  activeMedsCount = computed(() => this.medications().filter(m => m.active).length);
   chronicMedsCount = computed(() => this.medications().filter(m => m.isChronic).length);
   totalDosesToday = computed(() => {
     return this.medications()
-      .filter(m => m.isActive)
-      .reduce((total, m) => total + (m.timesPerDay || 1), 0);
+      .filter(m => m.active)
+      .reduce((total, m) => total + (m.frequencyPerDay || 1), 0);
   });
 
   ngOnInit(): void {
@@ -653,92 +689,117 @@ export class MedicationsComponent implements OnInit {
   loadData(): void {
     const userId = this.auth.getUserId();
     if (userId) {
-      this.api.getTreatmentPlans(userId).subscribe(plans => {
-        this.plans.set(plans);
-        const meds: MedicationWithPlan[] = [];
-        plans.forEach(p => {
-          if (p.medicationsList) {
-            p.medicationsList.forEach(m => {
-              meds.push({
-                ...m,
-                planId: p.id,
-                planTitle: p.title
-              });
-            });
-          }
-        });
-        this.medications.set(meds);
+      // Load user's medications from the medications API
+      this.api.getUserMedications(userId).subscribe({
+        next: meds => this.medications.set(meds),
+        error: err => console.error('Failed to load medications:', err)
+      });
+      // Also load plans for reference
+      this.api.getTreatmentPlans(userId).subscribe({
+        next: plans => this.plans.set(plans),
+        error: err => console.error('Failed to load plans:', err)
       });
     }
   }
 
-  toggleMedication(med: MedicationWithPlan): void {
-    med.isActive = !med.isActive;
-    // In a real app, you would call an API to update the medication
-    // this.api.updateMedication(med.id, { isActive: med.isActive }).subscribe();
+  toggleMedication(med: UserMedication): void {
+    this.api.toggleMedicationActive(med.id).subscribe({
+      next: updatedMed => {
+        this.medications.update(meds => 
+          meds.map(m => m.id === med.id ? updatedMed : m)
+        );
+      },
+      error: err => console.error('Failed to toggle medication:', err)
+    });
   }
 
-  editMedication(med: MedicationWithPlan): void {
+  editMedication(med: UserMedication): void {
     this.editingMed.set(med);
     this.newMed = {
       name: med.name,
       dosage: med.dosage || '',
-      frequency: med.frequency || 'Once daily',
-      planId: med.planId || null,
-      isActive: med.isActive !== false,
+      form: med.form || 'TABLET',
+      frequencyPerDay: med.frequencyPerDay || 1,
+      scheduledTimes: med.scheduledTimes?.length > 0 ? [...med.scheduledTimes] : ['08:00'],
+      instructions: med.instructions || '',
       isChronic: med.isChronic || false,
-      instructions: ''
+      active: med.active !== false,
+      remindersEnabled: med.remindersEnabled !== false,
+      reminderMinutesBefore: med.reminderMinutesBefore || 15,
+      notes: med.notes || ''
     };
     this.showAddDialog.set(true);
   }
 
-  deleteMedication(med: MedicationWithPlan): void {
+  deleteMedication(med: UserMedication): void {
     if (confirm(`Are you sure you want to delete ${med.name}?`)) {
-      // In a real app, you would call an API to delete
-      const currentMeds = this.medications();
-      this.medications.set(currentMeds.filter(m => m.id !== med.id));
+      this.api.deleteMedication(med.id).subscribe({
+        next: () => {
+          this.medications.update(meds => meds.filter(m => m.id !== med.id));
+        },
+        error: err => {
+          console.error('Failed to delete medication:', err);
+          alert('Failed to delete medication');
+        }
+      });
     }
   }
 
   saveMedication(): void {
-    if (!this.newMed.name) return;
+    const userId = this.auth.getUserId();
+    if (!userId || !this.newMed.name) return;
+
+    const request: CreateMedicationRequest = {
+      userId,
+      name: this.newMed.name,
+      dosage: this.newMed.dosage,
+      form: this.newMed.form,
+      frequencyPerDay: this.newMed.frequencyPerDay,
+      scheduledTimes: this.newMed.scheduledTimes,
+      instructions: this.newMed.instructions,
+      isChronic: this.newMed.isChronic,
+      active: this.newMed.active,
+      remindersEnabled: this.newMed.remindersEnabled,
+      reminderMinutesBefore: this.newMed.reminderMinutesBefore,
+      notes: this.newMed.notes
+    };
 
     if (this.editingMed()) {
-      // Update existing medication
-      const currentMeds = this.medications();
-      const index = currentMeds.findIndex(m => m.id === this.editingMed()?.id);
-      if (index >= 0) {
-        currentMeds[index] = {
-          ...currentMeds[index],
-          name: this.newMed.name,
-          dosage: this.newMed.dosage,
-          frequency: this.newMed.frequency,
-          isActive: this.newMed.isActive,
-          isChronic: this.newMed.isChronic
-        };
-        this.medications.set([...currentMeds]);
-      }
+      this.api.updateMedication(this.editingMed()!.id, request).subscribe({
+        next: updatedMed => {
+          this.medications.update(meds => 
+            meds.map(m => m.id === updatedMed.id ? updatedMed : m)
+          );
+          this.closeDialog();
+        },
+        error: err => {
+          console.error('Failed to update medication:', err);
+          alert('Failed to update medication');
+        }
+      });
     } else {
-      // Add new medication
-      const timesPerDay = this.newMed.frequency === 'Twice daily' ? 2 : 
-                          this.newMed.frequency === 'Three times daily' ? 3 : 1;
-      const newMedication: MedicationWithPlan = {
-        id: Date.now(), // Temporary ID
-        name: this.newMed.name,
-        dosage: this.newMed.dosage,
-        frequency: this.newMed.frequency,
-        isActive: this.newMed.isActive,
-        isChronic: this.newMed.isChronic,
-        instructions: this.newMed.instructions || '',
-        scheduledTimes: this.generateScheduledTimes(timesPerDay),
-        timesPerDay: timesPerDay,
-        planId: this.newMed.planId || undefined,
-        planTitle: this.plans().find(p => p.id === this.newMed.planId)?.title
-      };
-      this.medications.set([...this.medications(), newMedication]);
+      this.api.addMedication(request).subscribe({
+        next: newMed => {
+          this.medications.update(meds => [...meds, newMed]);
+          this.closeDialog();
+        },
+        error: err => {
+          console.error('Failed to add medication:', err);
+          alert('Failed to add medication');
+        }
+      });
     }
+  }
 
-    this.closeDialog();
+  toggleScheduledTime(time: string): void {
+    const idx = this.newMed.scheduledTimes.indexOf(time);
+    if (idx >= 0) {
+      this.newMed.scheduledTimes.splice(idx, 1);
+    } else {
+      this.newMed.scheduledTimes.push(time);
+      this.newMed.scheduledTimes.sort();
+    }
+    this.newMed.frequencyPerDay = this.newMed.scheduledTimes.length;
   }
 
   closeDialog(): void {
@@ -747,17 +808,16 @@ export class MedicationsComponent implements OnInit {
     this.newMed = {
       name: '',
       dosage: '',
-      frequency: 'Once daily',
-      planId: null,
-      isActive: true,
+      form: 'TABLET',
+      frequencyPerDay: 1,
+      scheduledTimes: ['08:00'],
+      instructions: '',
       isChronic: false,
-      instructions: ''
+      active: true,
+      remindersEnabled: true,
+      reminderMinutesBefore: 15,
+      notes: ''
     };
-  }
-
-  generateScheduledTimes(timesPerDay: number): string[] {
-    const times = ['08:00', '14:00', '20:00'];
-    return times.slice(0, timesPerDay);
   }
 }
 

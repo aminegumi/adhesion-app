@@ -486,6 +486,8 @@ export class MotivationComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadUserContext();
+    // Auto-generate motivation on page load
+    this.getMotivation();
   }
 
   async loadUserContext(): Promise<void> {

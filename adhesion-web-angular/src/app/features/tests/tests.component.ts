@@ -30,7 +30,7 @@ import { AuthService } from '../../core/services/auth.service';
               <div class="test-card">
                 <div class="test-header">
                   <h3>{{ test.title }}</h3>
-                  <span class="badge">{{ test.questions?.length || 0 }} questions</span>
+                  <span class="badge">{{ test.code }}</span>
                 </div>
                 <p>{{ test.description }}</p>
                 <a [routerLink]="['/test', test.id]" class="btn btn-primary">Take Test</a>

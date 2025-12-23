@@ -2,18 +2,8 @@ import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { ApiService, TreatmentPlan } from '../../core/services/api.service';
+import { ApiService, TreatmentPlan, DailyTask, CreatePlanRequest, PlanMedication } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
-
-interface PlanTask {
-  id: number;
-  name: string;
-  time: string;
-  completed: boolean;
-  type: 'medication' | 'activity' | 'appointment';
-  planId: number;
-  planTitle: string;
-}
 
 interface NewMedication {
   name: string;
@@ -62,42 +52,88 @@ interface NewMedication {
         <!-- Today's Tasks Tab -->
         @if (activeTab() === 'today') {
           <div class="today-section">
-            <div class="date-header">
-              <span class="day">{{ todayDate }}</span>
-              <span class="progress-badge">{{ completedTasksCount() }}/{{ todayTasks().length }} completed</span>
+            <!-- Progress Summary Card -->
+            <div class="daily-progress-card">
+              <div class="progress-info">
+                <span class="progress-title">Today's Progress</span>
+                <span class="progress-subtitle">{{ completedTasksCount() }} of {{ todayTasks().length }} tasks completed</span>
+              </div>
+              <div class="progress-circle">
+                <span>{{ todayTasks().length > 0 ? Math.round(completedTasksCount() / todayTasks().length * 100) : 0 }}%</span>
+              </div>
             </div>
 
             @if (todayTasks().length > 0) {
-              <div class="tasks-list">
-                @for (task of todayTasks(); track task.id) {
-                  <div class="task-item" [class.completed]="task.completed">
-                    <button class="task-checkbox" (click)="toggleTask(task)">
-                      @if (task.completed) {
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                      } @else {
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/></svg>
-                      }
-                    </button>
-                    <div class="task-content">
-                      <span class="task-name">{{ task.name }}</span>
-                      <span class="task-meta">
-                        <span class="task-time">{{ task.time }}</span>
-                        <span class="task-plan">{{ task.planTitle }}</span>
-                      </span>
-                    </div>
-                    <span class="task-type-icon" [class]="task.type">
-                      @if (task.type === 'medication') { 💊 }
-                      @else if (task.type === 'activity') { 🏃 }
-                      @else { 📅 }
-                    </span>
+              <!-- Pending Tasks -->
+              @if (pendingTasks().length > 0) {
+                <div class="task-section">
+                  <div class="section-label pending">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                    Pending Tasks ({{ pendingTasks().length }})
                   </div>
-                }
-              </div>
+                  <div class="tasks-list">
+                    @for (task of pendingTasks(); track task.id) {
+                      <div class="task-item">
+                        <button class="task-checkbox" (click)="toggleTask(task)">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/></svg>
+                        </button>
+                        <div class="task-icon" [class]="task.category || 'default'">
+                          @if (task.category === 'medication') { 💊 }
+                          @else if (task.category === 'activity') { 🏃 }
+                          @else { 📅 }
+                        </div>
+                        <div class="task-content">
+                          <span class="task-name">{{ task.title }}</span>
+                          @if (task.description) {
+                            <span class="task-desc">{{ task.description }}</span>
+                          }
+                          <div class="task-meta">
+                            <span class="task-time">🕐 {{ task.timeOfDay || 'Any time' }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+
+              <!-- Completed Tasks -->
+              @if (completedTasks().length > 0) {
+                <div class="task-section">
+                  <div class="section-label completed">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                    Completed ({{ completedTasks().length }})
+                  </div>
+                  <div class="tasks-list">
+                    @for (task of completedTasks(); track task.id) {
+                      <div class="task-item completed">
+                        <div class="task-checkbox done">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                        </div>
+                        <div class="task-icon" [class]="task.category || 'default'">
+                          @if (task.category === 'medication') { 💊 }
+                          @else if (task.category === 'activity') { 🏃 }
+                          @else { 📅 }
+                        </div>
+                        <div class="task-content">
+                          <span class="task-name">{{ task.title }}</span>
+                          @if (task.description) {
+                            <span class="task-desc">{{ task.description }}</span>
+                          }
+                          <div class="task-meta">
+                            <span class="task-time">🕐 {{ task.timeOfDay || 'Any time' }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
             } @else {
               <div class="empty-state small">
                 <div class="icon">🎉</div>
                 <h3>All caught up!</h3>
-                <p>No tasks scheduled for today.</p>
+                <p>{{ plans().length === 0 ? 'Create a treatment plan to get started' : 'Great job! You\'re all caught up!' }}</p>
               </div>
             }
           </div>
@@ -242,17 +278,23 @@ interface NewMedication {
 
               <div class="detail-section">
                 <h3>Medications ({{ selectedPlan()?.medicationsList?.length || 0 }})</h3>
+                @if ((selectedPlan()?.medicationsList?.length ?? 0) > 0) {
+                  <button class="sync-meds-btn" (click)="syncMedications(selectedPlan()!)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+                    Sync to My Medications
+                  </button>
+                }
                 <div class="meds-list">
-                  @for (med of selectedPlan()?.medicationsList; track med.id) {
+                  @for (med of selectedPlan()?.medicationsList; track med.name) {
                     <div class="med-item">
                       <span class="med-icon">💊</span>
                       <div class="med-info">
                         <span class="med-name">{{ med.name }}</span>
                         <span class="med-dosage">{{ med.dosage }} - {{ med.frequency }}</span>
+                        @if (med.times && med.times.length > 0) {
+                          <span class="med-times">{{ med.times.join(', ') }}</span>
+                        }
                       </div>
-                      <span class="med-status" [class.active]="med.isActive">
-                        {{ med.isActive ? 'Active' : 'Inactive' }}
-                      </span>
                     </div>
                   } @empty {
                     <p class="no-meds">No medications in this plan</p>
@@ -355,6 +397,73 @@ interface NewMedication {
       }
     }
 
+    .daily-progress-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      background: linear-gradient(135deg, var(--success), #34D399);
+      border-radius: 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+    }
+
+    .progress-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .progress-title {
+      color: white;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .progress-subtitle {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 14px;
+    }
+
+    .progress-circle {
+      width: 60px;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .task-section {
+      margin-bottom: 24px;
+    }
+
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      padding: 8px 14px;
+      border-radius: 20px;
+      width: fit-content;
+
+      &.pending {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--warning);
+      }
+
+      &.completed {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--success);
+      }
+    }
+
     .tasks-list {
       display: flex;
       flex-direction: column;
@@ -370,10 +479,13 @@ interface NewMedication {
       border-radius: 16px;
       box-shadow: var(--shadow-sm);
       transition: all 0.2s;
+      border-left: 3px solid var(--warning);
 
       &.completed {
-        opacity: 0.6;
-        .task-name { text-decoration: line-through; }
+        opacity: 0.7;
+        background: var(--gray-50);
+        border-left-color: var(--success);
+        .task-name { text-decoration: line-through; color: var(--gray-500); }
       }
     }
 
@@ -384,16 +496,34 @@ interface NewMedication {
       align-items: center;
       justify-content: center;
       background: transparent;
-      border: none;
-      color: var(--gray-400);
+      border: 2px solid var(--success);
+      border-radius: 50%;
+      color: var(--success);
       cursor: pointer;
       transition: all 0.2s;
 
-      &:hover { color: var(--success); transform: scale(1.1); }
+      &:hover { background: rgba(16, 185, 129, 0.1); transform: scale(1.05); }
+      
+      &.done {
+        background: var(--success);
+        color: white;
+        border: none;
+      }
     }
 
-    .task-item.completed .task-checkbox {
-      color: var(--success);
+    .task-icon {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      font-size: 20px;
+      background: rgba(156, 163, 175, 0.1);
+
+      &.medication { background: rgba(16, 185, 129, 0.1); }
+      &.activity { background: rgba(59, 130, 246, 0.1); }
+      &.default { background: rgba(156, 163, 175, 0.1); }
     }
 
     .task-content {
@@ -404,8 +534,15 @@ interface NewMedication {
     }
 
     .task-name {
-      font-weight: 500;
+      font-weight: 600;
       color: var(--gray-800);
+      font-size: 15px;
+    }
+
+    .task-desc {
+      font-size: 13px;
+      color: var(--gray-600);
+      line-height: 1.4;
     }
 
     .task-meta {
@@ -828,6 +965,33 @@ interface NewMedication {
         padding: 20px;
       }
     }
+
+    .sync-meds-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, var(--success), #34D399);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 16px;
+      transition: all 0.2s;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+      }
+    }
+
+    .med-times {
+      font-size: 12px;
+      color: var(--primary);
+    }
   `]
 })
 export class TreatmentPlansComponent implements OnInit {
@@ -835,6 +999,7 @@ export class TreatmentPlansComponent implements OnInit {
   private auth = inject(AuthService);
 
   plans = signal<TreatmentPlan[]>([]);
+  todayTasks = signal<DailyTask[]>([]);
   activeTab = signal<'today' | 'plans'>('today');
   showCreateDialog = signal(false);
   selectedPlan = signal<TreatmentPlan | null>(null);
@@ -855,43 +1020,43 @@ export class TreatmentPlansComponent implements OnInit {
     day: 'numeric' 
   });
 
-  todayTasks = computed(() => {
-    const tasks: PlanTask[] = [];
-    let taskId = 1;
-    
-    this.plans().forEach(plan => {
-      if (plan.status === 'ACTIVE' && plan.medicationsList) {
-        plan.medicationsList.forEach(med => {
-          if (med.isActive) {
-            tasks.push({
-              id: taskId++,
-              name: `Take ${med.name} (${med.dosage})`,
-              time: '08:00',
-              completed: false,
-              type: 'medication',
-              planId: plan.id,
-              planTitle: plan.title
-            });
-          }
-        });
-      }
-    });
-
-    return tasks.sort((a, b) => a.time.localeCompare(b.time));
-  });
-
   completedTasksCount = computed(() => {
     return this.todayTasks().filter(t => t.completed).length;
   });
 
+  pendingTasks = computed(() => {
+    return this.todayTasks().filter(t => !t.completed);
+  });
+
+  completedTasks = computed(() => {
+    return this.todayTasks().filter(t => t.completed);
+  });
+
+  // Expose Math for template
+  Math = Math;
+
   ngOnInit(): void {
     this.loadPlans();
+    this.loadTodaysTasks();
   }
 
   loadPlans(): void {
     const userId = this.auth.getUserId();
     if (userId) {
-      this.api.getTreatmentPlans(userId).subscribe(p => this.plans.set(p));
+      this.api.getTreatmentPlans(userId).subscribe({
+        next: p => this.plans.set(p),
+        error: err => console.error('Failed to load plans:', err)
+      });
+    }
+  }
+
+  loadTodaysTasks(): void {
+    const userId = this.auth.getUserId();
+    if (userId) {
+      this.api.getTodaysTasks(userId).subscribe({
+        next: tasks => this.todayTasks.set(tasks),
+        error: err => console.error('Failed to load tasks:', err)
+      });
     }
   }
 
@@ -899,8 +1064,17 @@ export class TreatmentPlansComponent implements OnInit {
     this.selectedPlan.set(plan);
   }
 
-  toggleTask(task: PlanTask): void {
-    task.completed = !task.completed;
+  toggleTask(task: DailyTask): void {
+    if (!task.completed) {
+      this.api.completeTask(task.id).subscribe({
+        next: updatedTask => {
+          this.todayTasks.update(tasks => 
+            tasks.map(t => t.id === task.id ? { ...t, completed: true } : t)
+          );
+        },
+        error: err => console.error('Failed to complete task:', err)
+      });
+    }
   }
 
   addMedicationField(): void {
@@ -934,7 +1108,7 @@ export class TreatmentPlansComponent implements OnInit {
       name: m.name,
       dosage: m.dosage || '',
       frequency: m.frequency || 'daily',
-      times: []
+      times: m.times || []
     }));
     this.showCreateDialog.set(true);
   }
@@ -953,33 +1127,40 @@ export class TreatmentPlansComponent implements OnInit {
     const userId = this.auth.getUserId();
     if (!userId) return;
 
-    const planData = {
+    const now = new Date();
+    const startDate = now.toISOString().split('T')[0];
+    const endDate = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const planRequest: CreatePlanRequest = {
+      userId,
       title: this.newPlan.title,
       description: this.newPlan.description,
       status: 'ACTIVE',
-      medications: this.newPlanMedications.map(m => ({
+      startDate,
+      endDate,
+      medicationsList: this.newPlanMedications.map(m => ({
         name: m.name,
         dosage: m.dosage,
         frequency: m.frequency,
-        isActive: true
+        times: m.times.length > 0 ? m.times : ['08:00']
       }))
     };
 
     if (this.editingPlan()) {
-      this.api.updateTreatmentPlan(this.editingPlan()!.id, planData).subscribe({
+      this.api.updateTreatmentPlan(this.editingPlan()!.id, planRequest).subscribe({
         next: () => {
           this.loadPlans();
           this.closeDialog();
         },
-        error: (err) => alert('Failed to update plan')
+        error: (err) => alert('Failed to update plan: ' + (err.message || err))
       });
     } else {
-      this.api.createTreatmentPlan(userId, planData).subscribe({
+      this.api.createTreatmentPlan(planRequest).subscribe({
         next: () => {
           this.loadPlans();
           this.closeDialog();
         },
-        error: (err) => alert('Failed to create plan')
+        error: (err) => alert('Failed to create plan: ' + (err.message || err))
       });
     }
   }
@@ -989,6 +1170,23 @@ export class TreatmentPlansComponent implements OnInit {
     this.editingPlan.set(null);
     this.newPlan = { title: '', description: '' };
     this.newPlanMedications = [];
+  }
+
+  syncMedications(plan: TreatmentPlan): void {
+    const userId = this.auth.getUserId();
+    if (!userId) return;
+
+    if (confirm('Sync medications from this plan to your personal medications list? This will add any new medications.')) {
+      this.api.syncMedicationsFromPlan(plan.id, userId).subscribe({
+        next: (meds) => {
+          alert(`Successfully synced ${meds.length} medication(s) to your list!`);
+        },
+        error: (err) => {
+          console.error('Failed to sync medications:', err);
+          alert('Failed to sync medications. Please try again.');
+        }
+      });
+    }
   }
 }
 

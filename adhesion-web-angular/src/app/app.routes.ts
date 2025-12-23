@@ -64,6 +64,11 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'todays-doses',
+    loadComponent: () => import('./features/doses/todays-doses.component').then(m => m.TodaysDosesComponent),
+    canActivate: [authGuard],
+  },
+  {
     path: 'treatment-plans',
     loadComponent: () => import('./features/treatment-plans/treatment-plans.component').then(m => m.TreatmentPlansComponent),
     canActivate: [authGuard],
