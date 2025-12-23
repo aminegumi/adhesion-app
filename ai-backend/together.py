@@ -10,6 +10,10 @@ import os
 import sys
 import threading
 
+# Suppress TensorFlow warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+
 # Add EmotiEffLib to path
 EMOTIEFF_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'EmotiEffLib-main')
 if EMOTIEFF_PATH not in sys.path:
@@ -22,36 +26,57 @@ CORS(app)
 camera_lock = threading.Lock()
 cam = None
 
-# Load EmotiEffLib emotion recognizer
+# Load ONNX model directly (avoid TensorFlow)
 model_loaded = False
-emotion_recognizer = None
+onnx_session = None
+EMOTION_LABELS = ['Anger', 'Contempt', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
 
 try:
-    from emotiefflib.facial_analysis import EmotiEffLibRecognizerOnnx
-    # Use local ONNX model path
+    import onnxruntime as ort
     ONNX_MODEL_PATH = os.path.join(EMOTIEFF_PATH, 'models', 'affectnet_emotions', 'onnx', 'enet_b0_8_best_vgaf.onnx')
     
     if os.path.exists(ONNX_MODEL_PATH):
-        # Monkey-patch to use local model
-        import emotiefflib.utils as utils
-        original_get_model_path_onnx = utils.get_model_path_onnx
-        def local_get_model_path_onnx(model_name):
-            local_path = os.path.join(EMOTIEFF_PATH, 'models', 'affectnet_emotions', 'onnx', model_name + '.onnx')
-            if os.path.exists(local_path):
-                return local_path
-            return original_get_model_path_onnx(model_name)
-        utils.get_model_path_onnx = local_get_model_path_onnx
-        
-        emotion_recognizer = EmotiEffLibRecognizerOnnx("enet_b0_8_best_vgaf")
+        onnx_session = ort.InferenceSession(ONNX_MODEL_PATH, providers=['CPUExecutionProvider'])
         model_loaded = True
-        print("✅ EmotiEffLib ONNX Emotion Detection loaded successfully!")
+        print("✅ ONNX Emotion Detection loaded successfully!")
     else:
         print(f"⚠️ ONNX model not found at: {ONNX_MODEL_PATH}")
 except Exception as e:
-    print(f"⚠️ EmotiEffLib not available: {e}")
-    import traceback
-    traceback.print_exc()
+    print(f"⚠️ ONNX Runtime not available: {e}")
     model_loaded = False
+
+def predict_emotion_onnx(face_img):
+    """Predict emotion using ONNX model directly"""
+    if onnx_session is None:
+        return "Neutral", 0.5
+    
+    try:
+        # Preprocess: resize to 224x224, normalize
+        img = cv2.resize(face_img, (224, 224))
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = img.astype(np.float32) / 255.0
+        # Normalize with ImageNet stats
+        mean = np.array([0.485, 0.456, 0.406])
+        std = np.array([0.229, 0.224, 0.225])
+        img = (img - mean) / std
+        # NCHW format
+        img = np.transpose(img, (2, 0, 1))
+        img = np.expand_dims(img, axis=0).astype(np.float32)
+        
+        # Run inference
+        input_name = onnx_session.get_inputs()[0].name
+        outputs = onnx_session.run(None, {input_name: img})
+        probs = outputs[0][0]
+        
+        # Softmax
+        probs = np.exp(probs) / np.sum(np.exp(probs))
+        emotion_idx = np.argmax(probs)
+        confidence = float(probs[emotion_idx])
+        
+        return EMOTION_LABELS[emotion_idx], confidence
+    except Exception as e:
+        print(f"Prediction error: {e}")
+        return "Neutral", 0.5
 
 # Load OpenCV face cascade
 face_cascade = None
@@ -133,42 +158,28 @@ def detect_faces(frame):
         return []
 
 def detect_emotion_emotieff(face_img):
-    """Detect emotion using EmotiEffLib"""
-    global emotion_recognizer
-    
-    if emotion_recognizer is None or not model_loaded:
+    """Detect emotion using ONNX model directly"""
+    if not model_loaded:
         return "Neutral", 0.5
     
     try:
-        # Convert BGR to RGB for the model
-        face_rgb = cv2.cvtColor(face_img, cv2.COLOR_BGR2RGB)
+        emotion, confidence = predict_emotion_onnx(face_img)
         
-        # Predict emotion
-        emotions, scores = emotion_recognizer.predict_emotions(face_rgb, logits=False)
+        # Map emotion names to our standard names
+        emotion_map = {
+            'Anger': 'Angry',
+            'Contempt': 'Contempt',
+            'Disgust': 'Disgust',
+            'Fear': 'Fear',
+            'Happy': 'Happy',
+            'Neutral': 'Neutral',
+            'Sad': 'Sad',
+            'Surprise': 'Surprise'
+        }
         
-        if emotions and len(emotions) > 0:
-            emotion = emotions[0]
-            # Get confidence for the predicted emotion
-            emotion_idx = list(emotion_recognizer.idx_to_emotion_class.values()).index(emotion)
-            confidence = float(scores[0][emotion_idx])
-            
-            # Map EmotiEffLib emotion names to our standard names
-            emotion_map = {
-                'Anger': 'Angry',
-                'Contempt': 'Contempt',
-                'Disgust': 'Disgust',
-                'Fear': 'Fear',
-                'Happiness': 'Happy',
-                'Neutral': 'Neutral',
-                'Sadness': 'Sad',
-                'Surprise': 'Surprise'
-            }
-            
-            return emotion_map.get(emotion, emotion), confidence
-        
-        return "Neutral", 0.5
+        return emotion_map.get(emotion, emotion), confidence
     except Exception as e:
-        print(f"EmotiEffLib detection error: {e}")
+        print(f"Emotion detection error: {e}")
         return "Neutral", 0.5
 
 def detection():
