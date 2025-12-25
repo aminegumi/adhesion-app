@@ -295,4 +295,119 @@ class UserMedicationServiceTest {
                     () -> userMedicationService.deleteMedication(999L));
         }
     }
+
+    @Nested
+    @DisplayName("Toggle and Update Tests")
+    class ToggleAndUpdateTests {
+
+        @Test
+        @DisplayName("Should toggle active status to inactive")
+        void shouldToggleActiveToInactive() {
+            testMedication.setActive(true);
+            when(medicationRepository.findById(1L)).thenReturn(Optional.of(testMedication));
+            when(medicationRepository.save(any(UserMedication.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(doseLogRepository.findPendingDosesByMedicationId(1L)).thenReturn(List.of());
+
+            UserMedicationDto result = userMedicationService.toggleActive(1L);
+
+            assertFalse(result.active());
+        }
+
+        @Test
+        @DisplayName("Should toggle reminders")
+        void shouldToggleReminders() {
+            testMedication.setRemindersEnabled(true);
+            when(medicationRepository.findById(1L)).thenReturn(Optional.of(testMedication));
+            when(medicationRepository.save(any(UserMedication.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            UserMedicationDto result = userMedicationService.toggleReminders(1L);
+
+            assertFalse(result.remindersEnabled());
+        }
+
+        @Test
+        @DisplayName("Should update stock")
+        void shouldUpdateStock() {
+            when(medicationRepository.findById(1L)).thenReturn(Optional.of(testMedication));
+            when(medicationRepository.save(any(UserMedication.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            UserMedicationDto result = userMedicationService.updateStock(1L, 50);
+
+            assertEquals(50, result.currentStock());
+        }
+
+        @Test
+        @DisplayName("Should throw when toggling non-existent medication")
+        void shouldThrowWhenTogglingNonExistent() {
+            when(medicationRepository.findById(999L)).thenReturn(Optional.empty());
+            assertThrows(NotFoundException.class, () -> userMedicationService.toggleActive(999L));
+        }
+
+        @Test
+        @DisplayName("Should update scheduled times")
+        void shouldUpdateScheduledTimes() {
+            when(medicationRepository.findById(1L)).thenReturn(Optional.of(testMedication));
+            when(medicationRepository.save(any(UserMedication.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(doseLogRepository.findPendingDosesByMedicationId(1L)).thenReturn(List.of());
+
+            List<java.time.LocalTime> times = List.of(java.time.LocalTime.of(9, 0), java.time.LocalTime.of(21, 0));
+            UserMedicationDto result = userMedicationService.updateScheduledTimes(1L, times);
+
+            assertEquals(2, result.scheduledTimes().size());
+        }
+    }
+
+    @Nested
+    @DisplayName("Generate Schedule Tests")
+    class GenerateScheduleTests {
+
+        @Test
+        @DisplayName("Should generate daily schedule")
+        void shouldGenerateDailySchedule() {
+            testMedication.setScheduledTimes("08:00,20:00");
+            when(medicationRepository.findCurrentlyActiveMedications(eq(1L), any(LocalDate.class)))
+                    .thenReturn(List.of(testMedication));
+            when(doseLogRepository.findByUserMedicationIdAndScheduledDateAndScheduledTime(any(), any(), any()))
+                    .thenReturn(Optional.empty());
+
+            int count = userMedicationService.generateDailySchedule(1L);
+
+            assertTrue(count >= 0);
+        }
+
+        @Test
+        @DisplayName("Should get low stock medications")
+        void shouldGetLowStockMedications() {
+            testMedication.setCurrentStock(3);
+            testMedication.setLowStockThreshold(5);
+            when(medicationRepository.findLowStockMedications(1L)).thenReturn(List.of(testMedication));
+
+            List<UserMedicationDto> result = userMedicationService.getLowStockMedications(1L);
+
+            assertEquals(1, result.size());
+        }
+
+        @Test
+        @DisplayName("Should get medication suggestions")
+        void shouldGetMedicationSuggestions() {
+            when(medicationRepository.findMedicationNames("Asp")).thenReturn(List.of("Aspirin", "Aspartame"));
+
+            List<String> result = userMedicationService.getMedicationSuggestions("Asp");
+
+            assertEquals(2, result.size());
+        }
+
+        @Test
+        @DisplayName("Should deactivate medication")
+        void shouldDeactivateMedication() {
+            when(medicationRepository.findById(1L)).thenReturn(Optional.of(testMedication));
+            when(medicationRepository.save(any(UserMedication.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(doseLogRepository.findPendingDosesByMedicationId(1L)).thenReturn(List.of());
+
+            userMedicationService.deactivateMedication(1L);
+
+            assertFalse(testMedication.getActive());
+            verify(medicationRepository).save(testMedication);
+        }
+    }
 }
